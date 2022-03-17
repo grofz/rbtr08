@@ -1,0 +1,50 @@
+# Main executable
+#ero.x
+
+# LATEX intermediates
+*.aux
+*.dvi
+*.log
+#a.pdf
+
+# ZIP libraries
+*.zip
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+## Make exception for link to the library
+#!/libminpack.a
+
+# Ignore /test2 directory
+#/test2
