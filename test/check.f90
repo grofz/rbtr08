@@ -34,7 +34,7 @@
     call tree % Firstnode(ires)
     do
       if (ires /= TREE_ERR_OK) exit
-      call tree % Printcurrentnode()
+      print *, tree % Printcurrentnode()
       call tree % Nextnode(ires)
       if (ires == TREE_ERR_NONEXT) &
           print *, 'next node says: this was the last node'
@@ -52,10 +52,10 @@
     print *, 'one element tree nextnode', ires
     call tree_b % Firstnode(ires)
     print *, 'one element tree firstnode', ires
-    call tree_b % Printcurrentnode()
+    print *, tree_b % Printcurrentnode()
     call tree_b % Nextnode(ires)
     print *, 'one element tree nextnode', ires
-    call tree_b % Printcurrentnode()
+    print *,  tree_b % Printcurrentnode()
 
     print *, 'Verify tree...'
     print *, 'Valid = ', tree % Isvalid_BST(ccc)
@@ -72,7 +72,7 @@
     call rbtree % Firstnode(ires)
     do
       if (ires /= TREE_ERR_OK) exit
-      call rbtree % Printcurrentnode()
+      print *, rbtree % Printcurrentnode()
       call rbtree % Nextnode(ires)
       if (ires == TREE_ERR_NONEXT) &
           print *, 'next node says: this was the last node'
@@ -80,6 +80,8 @@
 
     print *, 'Verify tree...'
     print *, 'Valid = ', rbtree % Isvalid_BST(ccc)
+    print *, 'Verify RB...'
+    print *, 'Valid RB = ', rbtree % Isvalid_rbtree()
 
   end subroutine test1
 

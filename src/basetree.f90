@@ -19,6 +19,7 @@
       integer(DAT_KIND), allocatable :: dat(:)
     contains
       procedure :: Parentf
+      procedure :: Leftchild, Rightchild
       procedure :: Grandparent
       procedure :: Uncle
       final :: basenode_Delete
@@ -50,16 +51,19 @@
 
   contains
 
-subroutine Printcurrentnode(this)
+function Printcurrentnode(this) result(str)
 ! TODO temporary for testing
   class(basetree_t), intent(in) :: this
+  character(len=:), allocatable :: str
+  character(len=1000) :: dat
   if (.not. associated(this % current)) then
-    print *, 'current not allocated...'
+    str='current not allocated...'
   else
-    print *, '[',this % current % dat,']'
+    write(dat,*) this % current % dat
+    str='['//trim(adjustl(dat))//']'
   endif
 
-end subroutine Printcurrentnode
+end function Printcurrentnode
 
 
     function basetree_Initialize() result(new)
@@ -181,6 +185,24 @@ end subroutine Printcurrentnode
 
 
 
+    function Leftchild(n)
+      class(basenode_t), pointer :: leftchild
+      class(basenode_t), intent(in) :: n
+
+      leftchild => n % left
+    end function Leftchild
+
+
+
+    function Rightchild(n)
+      class(basenode_t), pointer :: rightchild
+      class(basenode_t), intent(in) :: n
+
+      rightchild => n % right
+    end function Rightchild
+
+
+
     function Sibling(n)
       class(basenode_t), pointer :: sibling
       class(basenode_t), intent(in), pointer :: n
@@ -218,6 +240,60 @@ end subroutine Printcurrentnode
         uncle => null()
       endif
     end function Uncle
+
+
+
+    subroutine Rotate_left(a, piv)
+      class(basetree_t), intent(inout) :: a
+      class(basenode_t), pointer :: piv
+!
+! Rotate left. Fails if pivot is leaf or if pivot's right child is leaf.
+!
+      class(basenode_t), pointer :: par, rot
+      logical :: is_lc, is_rc
+
+      if (.not. associated(piv)) &
+      &   error stop "Rotate_left: pivot is not associated"
+
+      ! "par" is pivot's parent, it will be relinked to rotator.
+      ! Rotator "rot" is a right child of pivot. It must exists.
+      is_lc = Is_left_child(piv)
+      is_rc = Is_right_child(piv)
+      par => piv % Parentf()
+      rot => piv % right
+      if (.not. associated(rot)) &
+      &   error stop "Rotate_left: rotator is lead"
+
+      ! Left child of rotator relinked as right child of pivot,
+      ! and pivot will be its new parent (if it is not leaf)
+      piv % right => rot % left
+      if (associated(piv % right)) piv % right % parent => piv
+
+      ! Pivot will be a left child of rotator, and
+      ! rotator is new pivot's parent.
+      rot % left => piv
+      piv % parent => rot
+
+      ! Relink "par <--> piv" now as "par <--> rot"
+      if (.not. associated(par)) then
+        ! Pivot was a root node, rotator is a new root.
+        rot % parent => null()
+        a % root => rot
+ ! TODO temporary defensive check
+ if (is_lc .or. is_rc) error stop "Rotator_left: Defensive check"
+
+      else
+        ! Pivot was a parent's child, rotator takes its place.
+        rot % parent => par
+        if (is_lc .and. .not. is_rc) then
+          par % left => rot
+        elseif (is_rc .and. .not. is_lc) then
+          par % right => rot
+        else
+          error stop "Rotator_left: internal error, something very wrong"
+        endif
+      endif
+    end subroutine Rotate_left
 
 
 
@@ -302,15 +378,9 @@ end subroutine Printcurrentnode
 ! If tree is empty, "current" is nullified.
 !
       integer :: ierr0
-      class(basenode_t), pointer :: n
 
       if (associated(this % root)) then
-        n => this % root
-        do
-          if (.not. associated(n % left)) exit
-          n => n % left
-        enddo
-        this % current => n
+        this % current => Leftmost(this % root)
         ierr0 = TREE_ERR_OK
       else
         this % current => null()
