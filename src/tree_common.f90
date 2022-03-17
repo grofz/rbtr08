@@ -4,7 +4,7 @@
   module tree_common_m
     use kinds_m, only : I4B
     implicit none
-
+    public
     private I4B
 
     ! Kind of integer array containing the data
@@ -18,7 +18,10 @@
       end function
     end interface
 
-    ! Error codes
-    integer, parameter :: TREE_ERR_OK = 0, TREE_ERR_NOCURRENT = -1
+    ! Error codes of tree processing routines
+    integer, parameter :: TREE_ERR_OK = 0,         &
+    &                     TREE_ERR_NOCURRENT = -1, &
+    &                     TREE_ERR_EMPTY = -2,     &
+    &                     TREE_ERR_NONEXT = 1
 
   end module tree_common_m
