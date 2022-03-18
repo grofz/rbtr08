@@ -1,6 +1,7 @@
   program check
     implicit none
     call test1()
+    call test2()
   end program check
 
 
@@ -84,6 +85,62 @@
     print *, 'Valid RB = ', rbtree % Isvalid_rbtree()
 
   end subroutine test1
+
+
+
+  subroutine test2
+    use tree_tests_m
+    use rbtr_m
+    use basetree_m
+    implicit none
+
+    type(rbtr_t)     :: aobj, cobj, dobj
+    type(basetree_t) :: bobj
+    integer :: i
+
+    interface
+      pure function ccc(a,b) result(ires)
+        use kinds_m, only : I4B
+        integer :: ires
+        integer(I4B), intent(in) :: a(:), b(:)
+      end function
+    end interface
+
+
+    print *
+    print *, 'In test 2 '
+    call Insert_nodes(aobj, [10, 7, 5, 2, 6, 3], ccc)
+    call Print_nodes(aobj)
+    print *, 'Height of tree is: ', aobj % Height_range(), &
+    & aobj % Isvalid_rbtree()
+    print *
+
+    call Print_nodes(bobj)
+    call Insert_nodes(bobj, [10, 20, 30, 40, 50, 60], ccc)
+    call Insert_nodes(bobj, [21], ccc)
+    call Print_nodes(bobj)
+    print *, 'Height of tree is: ', bobj % Height_range()
+
+    call Insert_nodes(cobj, [10, 5, 7, 8, 9, 11, 12, 13], ccc)
+    print *, 'Is valid BST =',  cobj % Isvalid_BST(ccc)
+
+    !print *, 'Calling rotation'
+    !call Rotate_left(cobj, cobj % root)
+    !call Rotate_right(cobj, cobj % root)
+    print *, 'Is valid =',  cobj % Isvalid_BST(ccc), cobj % Isvalid_rbtree()
+
+    call Print_nodes(cobj)
+    print *, 'Height of tree is: ', cobj % Height_range()
+
+
+    do i = 100, 1, -1
+      call dobj % Insert([i], ccc)
+    enddo
+    call Print_nodes(dobj)
+    print *, 'Is valid =', dobj%Isvalid_BST(ccc), dobj%Isvalid_rbtree(), &
+    & dobj % Height_range()
+
+  end subroutine test2
 
 
 

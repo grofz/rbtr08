@@ -5,7 +5,7 @@
     implicit none
     private
 
-    integer, parameter :: RED_NODE = 1, BLACK_NODE = 0
+    integer(I1B), parameter :: RED_NODE = 1, BLACK_NODE = 0
 
     type, public, extends(basenode_t) :: rbnode_t
       private
@@ -41,10 +41,11 @@
         select type(aa => this % current)
         class is (rbnode_t)
           write(color,*) aa % color
-          str = str//' {'//trim(adjustl(color))//'}'
+          str = str//'{'//trim(adjustl(color))//'}'
         end select
       endif
     end function
+
 
 
     function rbtr_Initialize() result(new)
@@ -82,16 +83,74 @@
       end select
 
       call this % basetree_t % Insert(dat, cfun, newnode=new0, ierr=ierr0)
-print *, 'must correct'
 
-      if (associated(this % current, this % root)) then
-              print *, 'new node is toor'
-      else
-              print *, 'new node is not root'
-      endif
+      call insert_repair_tree(this, new0)
 
       if (present(ierr)) ierr = ierr0
     end subroutine rbtr_Insert
+
+
+
+    recursive subroutine insert_repair_tree(a, n)
+      class(rbtr_t), intent(inout) :: a
+      class(basenode_t), intent(inout), pointer :: n
+
+      class(basenode_t), pointer :: p, u, g
+      logical :: uncle_exists, uncle_is_red
+
+      uncle_is_red = .false.
+      p => n % Parentf()
+      if (.not. associated(p)) then
+        ! case 1 - root node mus be black
+        call Set_color(n, BLACK_NODE)
+
+      elseif (Is_black(p)) then
+        ! case 2 - nothing must be done
+        continue
+
+      else
+        ! parent is red
+        u => n % Uncle()
+        uncle_exists = associated(u)
+        if (uncle_exists) uncle_is_red = .not. Is_black(u)
+
+        if (uncle_exists .and. uncle_is_red) then
+          ! case 3 - repaint parent and uncle black and rerun on grandparent
+          g => n % Grandparent()
+          call Set_color(p, BLACK_NODE)
+          call Set_color(u, BLACK_NODE)
+          call Set_color(g, RED_NODE)
+          call insert_repair_tree(a, g)
+        else
+
+          ! case 4 - parent is red and uncle is black
+          g => n % Grandparent()
+
+          ! case 4, step 1
+          if (Is_right_child(n) .and. Is_left_child(p)) then
+            call Rotate_left(a, p)
+            n => p
+          elseif (Is_left_child(n) .and. Is_right_child(p)) then
+            call Rotate_right(a, p)
+            n => p
+          endif
+
+          ! case 4, step 2
+          p => n % Parentf()
+          g => n % Grandparent()
+
+          if (Is_left_child(n)) then
+            call Rotate_right(a, g)
+          elseif (Is_right_child(n)) then
+            call Rotate_left(a, g)
+          else
+            error stop "insert_repair_tree: internal error"
+          endif
+          call Set_color(p, BLACK_NODE)
+          call Set_color(g, RED_NODE)
+        endif
+      endif
+    end subroutine insert_repair_tree
 
 
 
@@ -111,6 +170,19 @@ print *, 'must correct'
         is_black = .true.
       endif
     end function Is_black
+
+
+
+    subroutine Set_color(n, color)
+      class(basenode_t), intent(inout) :: n
+      integer(I1B), intent(in) :: color
+      select type(n)
+      class is (rbnode_t)
+        n % color = color
+      class default
+        error stop "Set_color: node type must be extension of rbnode"
+      end select
+    end subroutine Set_color
 
 
 

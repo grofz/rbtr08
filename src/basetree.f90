@@ -11,6 +11,8 @@
     implicit none
     private
 
+    public Rotate_left, Rotate_right, Is_right_child, Is_left_child
+
     type, public :: basenode_t
       private
       class(basenode_t), pointer :: parent => null()
@@ -41,6 +43,7 @@
       procedure :: Printcurrentnode
       final :: basetree_Delete
       procedure :: Isvalid_BST => basetree_Isvalid_BST
+      procedure :: Height_range => basetree_Height_range
     end type basetree_t
 
     interface basetree_t
@@ -262,7 +265,7 @@ end function Printcurrentnode
       par => piv % Parentf()
       rot => piv % right
       if (.not. associated(rot)) &
-      &   error stop "Rotate_left: rotator is lead"
+      &   error stop "Rotate_left: rotator is leaf"
 
       ! Left child of rotator relinked as right child of pivot,
       ! and pivot will be its new parent (if it is not leaf)
@@ -295,6 +298,60 @@ end function Printcurrentnode
       endif
     end subroutine Rotate_left
 
+
+
+    subroutine Rotate_right(a, piv)
+      class(basetree_t), intent(inout) :: a
+      class(basenode_t), pointer :: piv
+!
+! Rotate right. Fails if pivot is leaf or if pivot's left child is leaf.
+!
+      class(basenode_t), pointer :: par, rot
+      logical :: is_lc, is_rc
+
+      if (.not. associated(piv)) &
+      &   error stop "Rotate_right: pivot is not associated"
+
+      ! "par" is pivot's parent, it will be relinked to rotator.
+      ! Rotator "rot" is a left child of pivot. It must exists.
+      is_lc = Is_left_child(piv)
+      is_rc = Is_right_child(piv)
+      par => piv % Parentf()
+      rot => piv % left
+      if (.not. associated(rot)) &
+      &   error stop "Rotate_right: rotator is a leaf"
+
+      ! Right child of rotator relinked as leff child of pipvot,
+      ! and pivot will be its new parent (if it is not leaf)
+      piv % left => rot % right
+      if (associated(piv % left)) piv % left % parent => piv
+
+      ! Pivot will be a right child of rotator, and rotator is new
+      ! pivot's parent
+      rot % right => piv
+      piv % parent => rot
+
+ !TODO This part duplicates "rotate_left", refactor?
+      ! Reconnect rotated part of tree to a up-stream node (par)
+      if (.not. associated(par)) then
+        ! Pivot was a root node, rotator is a new root
+        rot % parent => null()
+        a % root => rot
+ !TODO Temporary defensive check
+ if (is_lc .or. is_rc) error stop "Rotator_right: Defensive check"
+
+      else
+        ! Pivot was a parent's child, rotator takes its place
+        rot % parent => par
+        if (is_lc .and. .not. is_rc) then
+          par % left => rot
+        elseif (is_rc .and. .not. is_lc) then
+          par % right => rot
+        else
+          error stop "Rotator_right: internal error, something very wrong"
+        endif
+      endif
+    end subroutine Rotate_right
 
 
     logical function Is_left_child(n)
@@ -596,6 +653,37 @@ end function Printcurrentnode
       if (resmin /= 1) isvalid = .false.
 
     end subroutine Verify_BST
+
+
+
+    function basetree_Height_range(this) result(ht)
+       integer :: ht(2)
+       class(basetree_t), intent(in) :: this
+       call recurse_HR(this % root, ht(1), ht(2))
+    end function basetree_Height_range
+
+
+
+    recursive subroutine recurse_HR(n, hmin, hmax)
+      class(basenode_t), pointer, intent(in) :: n
+      integer, intent(out) :: hmin, hmax
+
+      integer :: hmin_left, hmin_right, hmax_left, hmax_right
+
+      if (.not. associated(n)) then
+        hmin = 0
+        hmax = 0
+        return
+      endif
+      call recurse_HR(n % Leftchild(), hmin_left, hmax_left)
+      call recurse_HR(n % Rightchild(), hmin_right, hmax_right)
+      hmin = min(hmin_left, hmin_right)
+      hmax = max(hmax_left, hmax_right)
+
+      hmin = hmin + 1
+      hmax = hmax + 1
+    end subroutine recurse_HR
+
 
 
 
