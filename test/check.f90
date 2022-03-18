@@ -1,6 +1,6 @@
   program check
     implicit none
-    call test1()
+  ! call test1()
     call test2()
   end program check
 
@@ -30,7 +30,7 @@
     call tree % Insert([50], ccc, ierr=ires)
     call tree % Insert([70], ccc, ierr=ires)
     call tree % Insert([65], ccc, ierr=ires)
-    print *, 'ires =', ires, tree%Nodesf()
+    print *, 'ires =', ires, tree%Size()
 
     call tree % Firstnode(ires)
     do
@@ -66,9 +66,9 @@
 
     rbtree = rbtr_t()
     call rbtree % Insert([10], ccc, ierr=ires)
-    print *, 'ires 1 =', ires, rbtree%Nodesf()
+    print *, 'ires 1 =', ires, rbtree%Size()
     call rbtree % Insert([20], ccc, ierr=ires)
-    print *, 'ires 1 =', ires, rbtree%Nodesf()
+    print *, 'ires 1 =', ires, rbtree%Size()
 
     call rbtree % Firstnode(ires)
     do
@@ -139,6 +139,28 @@
     call Print_nodes(dobj)
     print *, 'Is valid =', dobj%Isvalid_BST(ccc), dobj%Isvalid_rbtree(), &
     & dobj % Height_range()
+
+    !do i=1, 100
+    do i=100, 1, -3
+      if(dobj%Exists([i], ccc)) call dobj%Delnode()
+      print *, 'Deleted :', dobj%Isvalid_rbtree()
+    enddo
+    call Print_nodes(dobj)
+ return
+
+    ! test Exists
+    print *, 'Exist 10? ', aobj%Exists([10], ccc)
+    print *, 'Exist 7? ', aobj%Exists([7], ccc)
+    print *, 'Exist 2? ', aobj%Exists([2], ccc)
+    print *, 'Exist 13? ', aobj%Exists([13], ccc)
+100 continue
+    call Delete_nodes(aobj, [10, 7 ], ccc)
+    !call Delete_nodes(aobj, [10, 7, 5, 2, 6, 3], ccc)
+    call Print_nodes(aobj)
+    print *, 'Height of tree is: ', aobj % Height_range(), &
+    & aobj % Isvalid_rbtree()
+    print *
+    call Delete_nodes(aobj, [5, 2, 6, 3], ccc)
 
   end subroutine test2
 

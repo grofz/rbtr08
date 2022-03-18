@@ -18,6 +18,7 @@
     type, public, extends(basetree_t) :: rbtr_t
     contains
       procedure :: Insert => rbtr_Insert
+      procedure :: Delnode => rbtr_Delnode
       procedure :: Isvalid_rbtree => rbtr_Isvalid_rbtree
       procedure :: Printcurrentnode
     end type rbtr_t
@@ -207,7 +208,7 @@
       end select
 
       ! optional verification that the root is black
-      ! TODO not needed
+      if (.not. Is_black(this % root)) isvalid = .false. 
 
     end function rbtr_Isvalid_rbtree
 
@@ -250,5 +251,292 @@
       blacks = blacks_left
       if (Is_black(tree)) blacks = blacks + 1
     end subroutine Verify_RB
+
+
+
+    subroutine rbtr_Delnode(this, ierr)
+      class(rbtr_t), intent(inout) :: this
+      integer, optional, intent(out) :: ierr
+!
+! Remove current node from the red-black tree
+!
+      logical :: lfreed
+      integer :: ierr0
+      class(basenode_t), pointer :: n, ch
+
+      ierr0 = TREE_ERR_OK
+      if (.not. associated(this % root)) then
+        ierr0 = TREE_ERR_EMPTY
+      elseif (.not. associated(this % current)) then
+        ierr0 = TREE_ERR_NOCURRENT
+      endif
+
+      if (present(ierr)) then
+        ierr = ierr0
+        if (ierr0 /= TREE_ERR_OK) return
+      else
+        if (ierr0 /= TREE_ERR_OK) &
+        &   error stop "rbtr_Delnode: empty tree or null current pointer"
+      endif
+
+      n => this % current
+
+
+      ! CASE I: N has two children
+      ! * find the successor node, move content of that node to the current
+      !   node to be deleted and then delete the successor node
+      ! * continue to the CASE II (one or zero children)
+      if (associated(n% Leftchild()) .and. associated(n% Rightchild())) then
+        ch => Leftmost(n % Rightchild())
+        !deallocate(n % dat)
+        !n % dat = ch % dat
+        call move_alloc(ch % dat, n % dat)
+        n => ch
+        lfreed = .true.
+      else
+        lfreed = .false.
+      endif
+
+
+      ! CASE II: N has one or zero children:
+      ! * If N is red, both its children must be leafs.
+      !   Node can be removed without violating red-black properties.
+      ! * If N is black and its child CH is red, then N can be replaced by
+      !   CH, CH is relabeled black and we are done.
+      ! * If N is black with no children, removing N will break the
+      !   red-black tree properties and it must be rebalanced in
+      !   "delete_case1" subroutines.
+      if (associated(n % Leftchild())) then
+        ch => n % Leftchild()
+      elseif (associated(n % Rightchild())) then
+        ch => n % Rightchild()
+      else
+        ch => null()
+      endif
+
+      if (.not. associated(ch)) then
+        ! N has no children
+        if (Is_black(n)) call delete_case1(this, n)
+
+        ! N is red
+        if (.not. associated(n % Parentf())) then
+          ! N was root
+          this % root => null()
+        elseif (Is_left_child(n)) then
+          n % parent % left => null()
+        elseif (Is_right_child(n)) then
+          n % parent % right => null()
+        else
+          error stop 'rbtr_Delnode: impossible branch' ! TODO temporary check
+        endif
+
+      else
+        ! N has one child (N must be black and CH must be red)
+        ch % parent => n % parent
+        if (.not. associated(n % Parentf())) then
+          ! N was root, CH is new root
+          this % root => ch
+        elseif (Is_left_child(n)) then
+          n % parent % left => ch
+        elseif (Is_right_child(n)) then
+          n % parent % right => ch
+        else
+          error stop 'rbtr_Delnode: impossible branch2' ! TODO temporary check
+        endif
+
+        ! Assert N is black and CH is red
+        if (.not. (Is_black(n) .and. .not. Is_black(ch))) then
+          error stop "rbtr_Delnode: assertion failed."
+        endif
+        call Set_color(ch, BLACK_NODE)
+      endif
+
+
+      ! Now N can be deallocated
+      this % current => null()
+      this % nodes = this % nodes - 1
+
+      if (.not. lfreed) deallocate(n % dat)
+      deallocate(n)
+    end subroutine rbtr_Delnode
+
+
+
+    subroutine delete_case1(a, m)
+      class(rbtr_t), intent(inout) :: a
+      class(basenode_t), pointer :: m
+!
+! M is a black node without children.
+! If M is the new root, nothing needs to be done.
+! Otherwise proceed to case 2.
+!
+print *, 'DEL1 ', m % dat
+      if (associated(m % Parentf())) call delete_case2(a, m)
+    end subroutine delete_case1
+
+
+
+    subroutine delete_case2(a, m)
+      class(rbtr_t), intent(inout) :: a
+      class(basenode_t), pointer :: m
+!
+! If S is red:
+! * make S black, make P red and
+! * rotate left/right around P so S will become grandparent of M
+!
+      class(basenode_t), pointer :: s, p
+
+print *, 'DEL2 ', m % dat
+      s => Sibling(m)
+      p => m % Parentf()
+
+      if (.not. Is_black(s)) then
+        call Set_color(p, RED_NODE)
+        call Set_color(s, BLACK_NODE)
+        if (Is_left_child(m)) then
+          call Rotate_left(a, p)
+        else
+          call Rotate_right(a, p)
+        endif
+      endif
+      call delete_case34(a, m)
+    end subroutine delete_case2
+
+
+
+    subroutine delete_case34(a, m)
+      class(rbtr_t), intent(inout) :: a
+      class(basenode_t), pointer :: m
+!
+! If S, Sleft, Sright and P are black then
+! * repaint S red: this compensates the deleted black node in S' subtree
+!                  but the whole P->M and P->S sub-trees are one black node 
+!                  less than the remaining branches, therefore ...
+! * rebalance up-level: use delete_case1 on P
+!
+! If S, Sleft and Sright are black but P is red then
+! * exchange color of S and P and we are done
+!
+! Otherwise proceed to delete_case5
+!
+      class(basenode_t), pointer :: s, p
+print *, 'DEL3 ', m % dat
+
+      s => Sibling(m)
+      p => m % Parentf()
+
+      ! assert that sibling is not leaf
+      if (.not. associated(s)) &
+      &   error stop "delete_case34: defensive check, sibling is a leaf:"
+
+      if (Is_black(p) .and. Is_black(s) .and. &
+      &   Is_black(s % Leftchild())  .and. Is_black(s % Rightchild())) then
+        call Set_color(s, RED_NODE)
+        call delete_case1(a, p)
+
+      elseif ( .not. Is_black(p) .and. Is_black(s) .and. &
+      &   Is_black(s % Leftchild())  .and. Is_black(s % Rightchild())) then
+        call Set_color(s, RED_NODE)
+        call Set_color(p, BLACK_NODE)
+
+      else
+        call delete_case5(a, m)
+      endif
+    end subroutine delete_case34
+
+
+
+    subroutine delete_case5(a, m)
+      class(rbtr_t), intent(inout) :: a
+      class(basenode_t), pointer :: m
+!
+! S is black, S left is red, S right is black and M is the left child
+! * rotate right at S so S left is new sibling of M
+! * exchange colors of S and its ne parent (it was S left)
+!
+! Mirrored situation
+! S is black, S right is red, S left is black and M is the right child
+! * rotate left at S so S right is new sibling of M
+! * exchange colort of S and its new parent (it was S right)
+!
+! At the enf M should have black sibling with red children on the
+! outside of the tree and this falls into case 6
+!
+      class(basenode_t), pointer :: s
+print *, 'DEL5 ', m % dat
+
+      s => Sibling(m)
+      ! assert that sibling is not leaf
+      if (.not. associated(s)) &
+      &   error stop "delete_case5: defensive check, sibling is a leaf:"
+
+      ! assert that sibling is black
+      if (.not. Is_black(s)) &
+      &   error stop "delete_case5: sibling is red"
+
+      if (Is_left_child(m) .and. Is_black(s % Rightchild())) then
+        ! assert S left is red
+        if (Is_black(s % Leftchild())) error stop "delete_case5: assert1"
+
+        call Set_color(s, RED_NODE)
+        call Set_color(s % Leftchild(), BLACK_NODE)
+        call Rotate_right(a, s)
+
+      elseif (Is_right_child(m) .and. Is_black(s % Leftchild())) then
+        ! assert S right is red
+        if (Is_black(s % Rightchild())) error stop "delete_case5: assert2"
+
+        call Set_color(s, RED_NODE)
+        call Set_color(s % Rightchild(), BLACK_NODE)
+        call Rotate_left(a, s)
+      endif
+
+      call delete_case6(a, m)
+    end subroutine delete_case5
+
+
+
+    subroutine delete_case6(a, m)
+      class(rbtr_t), intent(inout) :: a
+      class(basenode_t), pointer :: m
+!
+! If S is black, its right child is red and M is the left child then
+! * rotate left at P so S becomes the parent of P and S's right child
+! * exchange colors P and S and make S's right child black
+!
+! Mirrored situation
+! If S is black, its left child is red and M is the right child then
+! * rotate right at P so S becomes the parent of P and S's left child
+! * exchange colors P and S and make S's left child black
+!
+! The properties of red-black tree are now restored
+!
+      class(basenode_t), pointer :: s, p
+print *, 'DEL6 ', m % dat
+
+      s => Sibling(m)
+      p => m % Parentf()
+
+      ! assert that sibling is not leaf
+      if (.not. associated(s)) &
+      &   error stop "delete_case6: defensive check, sibling is a leaf:"
+
+      !s % color = p % color
+      if (Is_black(p)) then
+        call Set_color(s, BLACK_NODE)
+      else
+        call Set_color(s, RED_NODE)
+      endif
+      call Set_color(p, BLACK_NODE)
+
+      if (Is_left_child(m)) then
+        call Set_color( s % Rightchild(), BLACK_NODE)
+        call Rotate_left(a, p)
+      else
+        call Set_color( s % Leftchild(), BLACK_NODE)
+        call Rotate_right(a, p)
+      endif
+    end subroutine delete_case6
+
 
   end module rbtr_m

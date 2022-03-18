@@ -12,9 +12,10 @@
     private
 
     public Rotate_left, Rotate_right, Is_right_child, Is_left_child
+    public Leftmost, Sibling
 
     type, public :: basenode_t
-      private
+      !private
       class(basenode_t), pointer :: parent => null()
       class(basenode_t), pointer :: left => null()
       class(basenode_t), pointer :: right => null()
@@ -33,13 +34,16 @@
       private
       class(basenode_t), pointer, public :: root => null()
       class(basenode_t), pointer, public :: current => null()
-      integer :: nodes = 0
+      integer, public :: nodes = 0
       ! note: some components must be public for extended types to work
       ! this inconvenience could be corrected later...
     contains
       procedure :: Insert => basetree_Insert
-      procedure :: Nodesf => basetree_Nodes
-      procedure :: Firstnode, Nextnode
+      procedure :: Exists => basetree_Exists
+      procedure :: Size => basetree_Nodes
+      procedure :: Read => basetree_Read
+      procedure :: Firstnode => basetree_Firstnode
+      procedure :: Nextnode => basetree_Nextnode
       procedure :: Printcurrentnode
       final :: basetree_Delete
       procedure :: Isvalid_BST => basetree_Isvalid_BST
@@ -158,6 +162,68 @@ end function Printcurrentnode
         error stop "insert_recurse: invalid result from cfun"
       end select
     end subroutine insert_recurse
+
+
+
+    logical function basetree_Exists(this, dat, cfun) result(exists)
+      class(basetree_t), intent(inout) :: this
+      integer(DAT_KIND), intent(in) :: dat(:)
+      procedure(cfun_abstract) :: cfun
+!
+! Return TRUE and set current pointer on the node if the node
+! with the value "dat" is present in the tree.
+! Otherwise return FALSE and current pointer is left unchanged
+!
+      class(basenode_t), pointer :: n
+      integer :: ires
+
+      exists = .false.
+      n => this % root
+      do
+        if (.not. associated(n)) exit
+        ires = cfun(dat, n % dat)
+        select case (ires)
+        case(-1) ! "dat % key" > "n % key" 
+          n => n % right
+        case(1)  ! "dat % key" < "n % key"
+          n => n % left
+        case(0)  ! node found
+          exists = .true.
+          this % current => n
+          exit
+        case default
+          error stop "Exists: invalid resutl from cfun"
+        end select 
+      enddo
+    end function basetree_Exists
+
+
+
+    function basetree_Read(this, ierr) result(dat)
+      class(basetree_t), intent(in) :: this
+      integer, optional, intent(out) :: ierr
+      integer(DAT_KIND), allocatable :: dat(:)
+!
+! Return data of the node that is pointed by "current" pointer.
+! If current points nowhere, function fails or flags an error.
+!
+      integer :: ierr0
+
+      if (.not. associated(this % root)) then
+        ierr0 = TREE_ERR_EMPTY
+      elseif (.not. associated(this % current)) then
+        ierr0 = TREE_ERR_NOCURRENT
+      else
+        ierr0 = TREE_ERR_OK
+        dat = this % current % dat
+      endif
+
+      if (present(ierr)) then
+        ierr = ierr0
+      elseif (ierr0 /= TREE_ERR_OK) then
+        error stop "basetree_Read: current pointer is null"
+      endif
+    end function basetree_Read
 
 
 
@@ -427,7 +493,7 @@ end function Printcurrentnode
 
 
 
-    subroutine Firstnode(this, ierr)
+    subroutine basetree_Firstnode(this, ierr)
       class(basetree_t), intent(inout) :: this
       integer, intent(out), optional :: ierr
 !
@@ -444,11 +510,11 @@ end function Printcurrentnode
         ierr0 = TREE_ERR_EMPTY
       endif
       if (present(ierr)) ierr = ierr0
-    end subroutine Firstnode
+    end subroutine basetree_Firstnode
 
 
 
-    subroutine Nextnode(this, ierr)
+    subroutine basetree_Nextnode(this, ierr)
       class(basetree_t), intent(inout) :: this
       integer, intent(out), optional :: ierr
 !
@@ -471,7 +537,7 @@ end function Printcurrentnode
         this % current => n
       endif
       if (present(ierr)) ierr = ierr0
-    end subroutine Nextnode
+    end subroutine basetree_Nextnode
 
 
 
