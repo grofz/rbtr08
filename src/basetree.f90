@@ -281,6 +281,8 @@
           message = "reading from empty tree"
         case (TREE_ERR_NOCURRENT)
           message = "reading from behind the last node"
+        case default
+          message = "Just to make compiler happy"
         end select
         error stop "basetree_Readnext: "//message
       endif

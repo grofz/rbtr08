@@ -16,6 +16,7 @@
 
 
     type, public, extends(basetree_t) :: rbtr_t
+      private
     contains
       procedure :: Insert => rbtr_Insert
       procedure :: Delete => rbtr_Delete

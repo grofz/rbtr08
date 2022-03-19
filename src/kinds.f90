@@ -3,6 +3,7 @@
 !
   module kinds_m
     
+    integer, parameter :: I8B = selected_int_kind(18)
     integer, parameter :: I4B = selected_int_kind(9)
     integer, parameter :: I2B = selected_int_kind(4)
     integer, parameter :: I1B = selected_int_kind(2)

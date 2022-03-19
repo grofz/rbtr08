@@ -176,7 +176,7 @@
   subroutine test3(nsize)
     use tree_tests_m
     use rbtr_m, only : rbtr_t
-    use basetree_m, only : basetree_t
+    !use basetree_m, only : basetree_t
     !use tree_common_m
     logical, parameter :: IS_VALIDATED = .false.
 
@@ -194,6 +194,7 @@
       end function
     end interface
 
+    print *, aobj % basetree_t % nodes
 
     ! Fill by N items
     y0 = Get_array(nsize)
