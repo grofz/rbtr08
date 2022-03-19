@@ -18,7 +18,7 @@
     type, public, extends(basetree_t) :: rbtr_t
     contains
       procedure :: Insert => rbtr_Insert
-      procedure :: Delnode => rbtr_Delnode
+      procedure :: Delete => rbtr_Delete
       procedure :: Isvalid_rbtree => rbtr_Isvalid_rbtree
       procedure :: Printcurrentnode
     end type rbtr_t
@@ -56,23 +56,23 @@
 
 
 
-    subroutine rbtr_Insert(this, dat, cfun, newnode, ierr)
-      class(rbtr_t), intent(inout) :: this
+    subroutine rbtr_Insert(this, dat, cfun, newnode)
+      class(rbtr_t), intent(inout)  :: this
       integer(DAT_KIND), intent(in) :: dat(:)
-      procedure(cfun_abstract) :: cfun
+      procedure(cfun_abstract)      :: cfun
       class(basenode_t), pointer, optional :: newnode
-      integer, intent(out), optional :: ierr
 !
-! Insert a node to red-black tree
-! Over-riding type-bound procedure in "basetree" class
+! Insert a node to a red-black tree.
+! [over-riding type-bound procedure in "basetree" class]
+!
+! Get a new node as "rbnode_t" and call insertion procedure of a base class.
+! Then repair the tree.
 !
       class(basenode_t), pointer :: new0
-      integer :: ierr0
 
       if (present(newnode)) then
+        ! already allocated node can be used if necessary
         new0 => newnode
- !error stop "rbtr_Insert: optional argument must not be present"
- print *, 'warning rbtr_insert: optional argument must not be present'
       else
         allocate(rbnode_t :: new0)
       endif
@@ -83,11 +83,9 @@
         error stop "rbtr_Insert: newnode must be an extension of rbnode_t"
       end select
 
-      call this % basetree_t % Insert(dat, cfun, newnode=new0, ierr=ierr0)
+      call this % basetree_t % Insert(dat, cfun, newnode=new0)
 
       call insert_repair_tree(this, new0)
-
-      if (present(ierr)) ierr = ierr0
     end subroutine rbtr_Insert
 
 
@@ -202,7 +200,7 @@
 
       select type(tree => this % root)
       class is (rbnode_t)
-        call Verify_RB(tree, isvalid, blacks)
+        call verify_RB(tree, isvalid, blacks)
       class default
         error stop 'Isvalid_rbtree root must be rbnode_t'
       end select
@@ -214,7 +212,7 @@
 
 
 
-    recursive subroutine Verify_RB(tree, isvalid, blacks)
+    recursive subroutine verify_RB(tree, isvalid, blacks)
       class(basenode_t), pointer, intent(in) :: tree
       logical, intent(out) :: isvalid
       integer, intent(out) :: blacks
@@ -250,11 +248,11 @@
 
       blacks = blacks_left
       if (Is_black(tree)) blacks = blacks + 1
-    end subroutine Verify_RB
+    end subroutine verify_RB
 
 
 
-    subroutine rbtr_Delnode(this, ierr)
+    subroutine rbtr_Delete(this, ierr)
       class(rbtr_t), intent(inout) :: this
       integer, optional, intent(out) :: ierr
 !
@@ -276,7 +274,7 @@
         if (ierr0 /= TREE_ERR_OK) return
       else
         if (ierr0 /= TREE_ERR_OK) &
-        &   error stop "rbtr_Delnode: empty tree or null current pointer"
+        &   error stop "rbtr_Delete: empty tree or null current pointer"
       endif
 
       n => this % current
@@ -327,7 +325,7 @@
         elseif (Is_right_child(n)) then
           n % parent % right => null()
         else
-          error stop 'rbtr_Delnode: impossible branch' ! TODO temporary check
+          error stop 'rbtr_Delete: impossible branch' ! TODO temporary check
         endif
 
       else
@@ -341,12 +339,12 @@
         elseif (Is_right_child(n)) then
           n % parent % right => ch
         else
-          error stop 'rbtr_Delnode: impossible branch2' ! TODO temporary check
+          error stop 'rbtr_Delete: impossible branch2' ! TODO temporary check
         endif
 
         ! Assert N is black and CH is red
         if (.not. (Is_black(n) .and. .not. Is_black(ch))) then
-          error stop "rbtr_Delnode: assertion failed."
+          error stop "rbtr_Delete: assertion failed."
         endif
         call Set_color(ch, BLACK_NODE)
       endif
@@ -358,7 +356,7 @@
 
       if (.not. lfreed) deallocate(n % dat)
       deallocate(n)
-    end subroutine rbtr_Delnode
+    end subroutine rbtr_Delete
 
 
 
@@ -370,7 +368,6 @@
 ! If M is the new root, nothing needs to be done.
 ! Otherwise proceed to case 2.
 !
-print *, 'DEL1 ', m % dat
       if (associated(m % Parentf())) call delete_case2(a, m)
     end subroutine delete_case1
 
@@ -386,7 +383,6 @@ print *, 'DEL1 ', m % dat
 !
       class(basenode_t), pointer :: s, p
 
-print *, 'DEL2 ', m % dat
       s => Sibling(m)
       p => m % Parentf()
 
@@ -420,7 +416,6 @@ print *, 'DEL2 ', m % dat
 ! Otherwise proceed to delete_case5
 !
       class(basenode_t), pointer :: s, p
-print *, 'DEL3 ', m % dat
 
       s => Sibling(m)
       p => m % Parentf()
@@ -463,7 +458,6 @@ print *, 'DEL3 ', m % dat
 ! outside of the tree and this falls into case 6
 !
       class(basenode_t), pointer :: s
-print *, 'DEL5 ', m % dat
 
       s => Sibling(m)
       ! assert that sibling is not leaf
@@ -512,7 +506,6 @@ print *, 'DEL5 ', m % dat
 ! The properties of red-black tree are now restored
 !
       class(basenode_t), pointer :: s, p
-print *, 'DEL6 ', m % dat
 
       s => Sibling(m)
       p => m % Parentf()

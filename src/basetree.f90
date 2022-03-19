@@ -1,10 +1,19 @@
 !
-! Classes for binary search tree (BST) container
+! Classes for a binary search tree (BST) container.
 !
 ! grofz@vscht.cz
 ! March 2022
 !
 ! Version: Work in progress...
+!
+! Note for myself: This module is not encapsulated as properly as I would
+! like. Many components must be public, so extended types can operate.
+! In future, I might find a better method.
+! At the moment, I do not recommend this module is used only in modules
+! that extend this class. In applications, use extended classes, that 
+! might be encapsulated in a better way.
+!
+!
 !
   module basetree_m
     use tree_common_m
@@ -15,7 +24,7 @@
     public Leftmost, Sibling
 
     type, public :: basenode_t
-      !private
+      ! rbtr_DeleteNode needs access to these components
       class(basenode_t), pointer :: parent => null()
       class(basenode_t), pointer :: left => null()
       class(basenode_t), pointer :: right => null()
@@ -25,27 +34,28 @@
       procedure :: Leftchild, Rightchild
       procedure :: Grandparent
       procedure :: Uncle
-      final :: basenode_Delete
+      !final :: basenode_Destructor
     end type basenode_t
 
 
 
     type, public :: basetree_t
+      ! rbtr_m routines needs access to these components
       private
       class(basenode_t), pointer, public :: root => null()
       class(basenode_t), pointer, public :: current => null()
       integer, public :: nodes = 0
-      ! note: some components must be public for extended types to work
-      ! this inconvenience could be corrected later...
     contains
       procedure :: Insert => basetree_Insert
       procedure :: Exists => basetree_Exists
-      procedure :: Size => basetree_Nodes
       procedure :: Read => basetree_Read
+      procedure :: ReadNext => basetree_ReadNext
+      procedure :: Resetnode => basetree_Resetnode
       procedure :: Firstnode => basetree_Firstnode
       procedure :: Nextnode => basetree_Nextnode
       procedure :: Printcurrentnode
-      final :: basetree_Delete
+      final :: basetree_Destructor
+      procedure :: Size => basetree_Nodes
       procedure :: Isvalid_BST => basetree_Isvalid_BST
       procedure :: Height_range => basetree_Height_range
     end type basetree_t
@@ -58,43 +68,49 @@
 
   contains
 
-function Printcurrentnode(this) result(str)
-! TODO temporary for testing
-  class(basetree_t), intent(in) :: this
-  character(len=:), allocatable :: str
-  character(len=1000) :: dat
-  if (.not. associated(this % current)) then
-    str='current not allocated...'
-  else
-    write(dat,*) this % current % dat
-    str='['//trim(adjustl(dat))//']'
-  endif
+    function Printcurrentnode(this) result(str)
+!
+! Display content of the "current" node
+!
+      class(basetree_t), intent(in) :: this
+      character(len=:), allocatable :: str
+      character(len=1000) :: dat
+      if (.not. associated(this % current)) then
+        str='current not allocated...'
+      else
+        write(dat,*) this % current % dat
+        str='['//trim(adjustl(dat))//']'
+      endif
+    end function Printcurrentnode
 
-end function Printcurrentnode
 
 
     function basetree_Initialize() result(new)
       type(basetree_t) :: new
-!     allocate(basenode_t :: new % typet)
-! TODO just dummy constructot
+!
+! A dummy constructor doing nothing at the moment
+!
     end function basetree_Initialize
 
 
 
-    subroutine basetree_Insert(this, dat, cfun, newnode, ierr)
+    subroutine basetree_Insert(this, dat, cfun, newnode)
       class(basetree_t), intent(inout) :: this
       integer(DAT_KIND), intent(in) :: dat(:)
       procedure(cfun_abstract) :: cfun
       class(basenode_t), pointer, optional :: newnode
-      integer, intent(out), optional :: ierr
 !
-! Insert new node to the tree.
+! Insert a new node to the tree.
+! If pointer "newnode" is present, the existing node is used,
+! otherwise a new "basenode_t" node is allocated.
+! The "dat" component of an existing node must be deallocated. 
+!
+! The "current" pointer is unchanged.
 !        
       class(basenode_t), pointer :: new0
-      integer :: ierr0
 
       ! Prepare new node to be selected to the tree
-      ! Node that other than "basenode_t" must be allocated up-stream
+      ! Node type other than "basenode_t" must be allocated up-stream
       if (present(newnode)) then
         new0 => newnode
       else
@@ -103,22 +119,21 @@ end function Printcurrentnode
       if (.not. associated(new0)) &
       &   error stop 'basetree_Insert: newnode points nowhere'
 
-      new0 % dat = dat ! TODO budu davat data tady nebo up-stream?
+      ! Fail if neccessary to prevent inadvertent data overwriting
+      if (allocated(new0 % dat)) &
+      &   error stop 'basetree_Insert: newnode already contains data'
 
+      new0 % dat = dat
       if (.not. associated(this % root)) then
-        ! This is the first node
+        ! tree is empty
         this % root => new0
         if (this % nodes /= 0) &
         &   error stop 'basetree_Insert: nodes /= 0 for the first node'
       else
-        ! Insert new node into the existing tree
         call insert_recurse(this, this % root, new0, cfun)
       endif
 
-      this % current => new0
       this % nodes = this % nodes + 1
-      ierr0 = TREE_ERR_OK
-      if (present(ierr)) ierr = ierr0
     end subroutine basetree_Insert
 
 
@@ -155,11 +170,11 @@ end function Printcurrentnode
         endif
 
       case(0)
-        ! Duplicit nodes
+        ! Duplicit nodes not allowed at the moment
         error stop "insert_recurse: duplicit not ready yet"
 
       case default
-        error stop "insert_recurse: invalid result from cfun"
+        error stop "insert_recurse: invalid output from cfun"
       end select
     end subroutine insert_recurse
 
@@ -172,7 +187,7 @@ end function Printcurrentnode
 !
 ! Return TRUE and set current pointer on the node if the node
 ! with the value "dat" is present in the tree.
-! Otherwise return FALSE and current pointer is left unchanged
+! Otherwise return FALSE and current pointer is not touched.
 !
       class(basenode_t), pointer :: n
       integer :: ires
@@ -224,6 +239,52 @@ end function Printcurrentnode
         error stop "basetree_Read: current pointer is null"
       endif
     end function basetree_Read
+
+
+
+    function basetree_ReadNext(this, ierr) result(dat)
+      class(basetree_t), intent(inout) :: this
+      integer, optional, intent(out) :: ierr
+      integer(DAT_KIND), allocatable :: dat(:)
+!
+! Move "current" node pointer to a next node and return its data.
+! If "current" is not set, data of a first node are returned.
+! If "current" points to the last node, function fails or flags an error.
+! If tree is empty, function fails or flags an error.
+!
+      integer :: ierr0
+      character(len=:), allocatable :: message
+      integer(DAT_KIND), parameter :: empty_data(2) = [-99, -99]
+
+      ierr0 = TREE_ERR_OK
+      if (.not. associated(this % root)) then
+        ierr0 = TREE_ERR_EMPTY
+        dat = empty_data
+      elseif (.not. associated(this % current)) then
+        this % current => Leftmost(this % root)
+        dat = this % current % dat
+      else
+        this % current => Successor(this % current)
+        if (associated(this % current)) then
+          dat = this % current % dat
+        else
+          ierr0 = TREE_ERR_NOCURRENT
+          dat = empty_data
+        endif
+      endif
+
+      if (present(ierr)) then
+        ierr = ierr0
+      elseif (ierr0 /= TREE_ERR_OK) then
+        select case (ierr0)
+        case (TREE_ERR_EMPTY)
+          message = "reading from empty tree"
+        case (TREE_ERR_NOCURRENT)
+          message = "reading from behind the last node"
+        end select
+        error stop "basetree_Readnext: "//message
+      endif
+    end function basetree_ReadNext
 
 
 
@@ -462,24 +523,24 @@ end function Printcurrentnode
 
 
 
-    logical function Is_inner_grandparent(n)
-      class(basenode_t), intent(in), pointer :: n
+   ! logical function Is_inner_grandparent(n)
+   !   class(basenode_t), intent(in), pointer :: n
 !
 ! True if "n" is in the inner sub-tree of his grand-parent
 ! (to be used by red-black tree insetion algorithm)
 !
-      class(basenode_t), pointer :: p
+      !class(basenode_t), pointer :: p
 
-      is_inner_grandparent = .false.
-      p => n % Parentf()
-      if (.not. associated(p)) return
+      !is_inner_grandparent = .false.
+      !p => n % Parentf()
+      !if (.not. associated(p)) return
 
-      if (Is_left_child(n)) then
-        if (Is_right_child(p)) is_inner_grandparent = .true.
-      elseif (Is_right_child(n)) then
-        if (Is_left_child(p)) is_inner_grandparent = .true.
-      endif
-    end function Is_inner_grandparent
+      !if (Is_left_child(n)) then
+      !  if (Is_right_child(p)) is_inner_grandparent = .true.
+      !elseif (Is_right_child(n)) then
+      !  if (Is_left_child(p)) is_inner_grandparent = .true.
+      !endif
+    !end function Is_inner_grandparent
 
 
 
@@ -498,7 +559,7 @@ end function Printcurrentnode
       integer, intent(out), optional :: ierr
 !
 ! Set "current" pointer to the first node in the tree.
-! If tree is empty, "current" is nullified.
+! If tree is empty, "current" end as null pointer.
 !
       integer :: ierr0
 
@@ -511,6 +572,23 @@ end function Printcurrentnode
       endif
       if (present(ierr)) ierr = ierr0
     end subroutine basetree_Firstnode
+
+
+
+    subroutine basetree_Resetnode(this, ierr)
+      class(basetree_t), intent(inout) :: this
+      integer, intent(out), optional :: ierr
+!
+! Unset the "current" pointer.
+! If tree is empty, flag TREE_ERR_EMPTY
+!
+      integer :: ierr0
+
+      this % current => null()
+      ierr0 = TREE_ERR_OK
+      if (.not. associated(this % root)) ierr0 = TREE_ERR_EMPTY
+      if (present(ierr)) ierr = ierr0
+    end subroutine basetree_Resetnode
 
 
 
@@ -752,16 +830,16 @@ end function Printcurrentnode
 
 
 
+    !Finalizer for basenode_t objects is not needed at the moment
+    !
+    !subroutine basenode_Destructor(n)
+    !  type(basenode_t), intent(inout) :: n
+    !  if (allocated(n % dat)) deallocate(n % dat)
+    !end subroutine basenode_Destructor
 
-    subroutine basenode_Delete(n)
-      type(basenode_t), intent(inout) :: n
-      if (allocated(n % dat)) deallocate(n % dat)
-      ! TODO asi neni potreba
-    end subroutine basenode_Delete
 
 
-
-    subroutine basetree_Delete(this)
+    subroutine basetree_Destructor(this)
       type(basetree_t), intent(inout) :: this
 !
 ! Finalize the "basetree_t" object
@@ -779,7 +857,7 @@ print *, '...deleted nodes = ', counter
       ! reset all components (just in case the routine called directly)
       this % nodes = 0
       this % current => null()
-    end subroutine basetree_Delete
+    end subroutine basetree_Destructor
 
 
 

@@ -1,7 +1,13 @@
   program check
     implicit none
+    integer :: n
+
+    write(*,'(a)',advance='no') 'Items = ? '
+    read(*,*) n
+    print *
   ! call test1()
-    call test2()
+  ! call test2()
+    call test3(n)
   end program check
 
 
@@ -24,13 +30,13 @@
     end interface
 
     tree = basetree_t()
-    call tree % Insert([10], ccc, ierr=ires)
-    call tree % Insert([20], ccc, ierr=ires)
-    call tree % Insert([15], ccc, ierr=ires)
-    call tree % Insert([50], ccc, ierr=ires)
-    call tree % Insert([70], ccc, ierr=ires)
-    call tree % Insert([65], ccc, ierr=ires)
-    print *, 'ires =', ires, tree%Size()
+    call tree % Insert([10], ccc)
+    call tree % Insert([20], ccc)
+    call tree % Insert([15], ccc)
+    call tree % Insert([50], ccc)
+    call tree % Insert([70], ccc)
+    call tree % Insert([65], ccc)
+    print *, 'aize =', tree%Size()
 
     call tree % Firstnode(ires)
     do
@@ -48,7 +54,7 @@
     print *, 'empty tree Firstnode', ires
     call tree_b % Nextnode(ires)
     print *, 'empty tree nextnode', ires
-    call tree_b % Insert([50], ccc, ierr=ires)
+    call tree_b % Insert([50], ccc)
     call tree_b % Nextnode(ires)
     print *, 'one element tree nextnode', ires
     call tree_b % Firstnode(ires)
@@ -65,10 +71,10 @@
   print *, "Put some tests in here!"
 
     rbtree = rbtr_t()
-    call rbtree % Insert([10], ccc, ierr=ires)
-    print *, 'ires 1 =', ires, rbtree%Size()
-    call rbtree % Insert([20], ccc, ierr=ires)
-    print *, 'ires 1 =', ires, rbtree%Size()
+    call rbtree % Insert([10], ccc)
+    print *, 'size 1 =', rbtree%Size()
+    call rbtree % Insert([20], ccc)
+    print *, 'size 1 =', rbtree%Size()
 
     call rbtree % Firstnode(ires)
     do
@@ -93,6 +99,7 @@
     use rbtr_m
     use basetree_m
     implicit none
+
 
     type(rbtr_t)     :: aobj, cobj, dobj
     type(basetree_t) :: bobj
@@ -142,7 +149,7 @@
 
     !do i=1, 100
     do i=100, 1, -3
-      if(dobj%Exists([i], ccc)) call dobj%Delnode()
+      if(dobj%Exists([i], ccc)) call dobj%Delete()
       print *, 'Deleted :', dobj%Isvalid_rbtree()
     enddo
     call Print_nodes(dobj)
@@ -163,6 +170,94 @@
     call Delete_nodes(aobj, [5, 2, 6, 3], ccc)
 
   end subroutine test2
+
+
+
+  subroutine test3(nsize)
+    use tree_tests_m
+    use rbtr_m, only : rbtr_t
+    use basetree_m, only : basetree_t
+    !use tree_common_m
+    logical, parameter :: IS_VALIDATED = .false.
+
+    integer, intent(in) :: nsize
+    type(rbtr_t) :: aobj
+    integer, allocatable :: y0(:), ys(:), yinside(:), yremoved(:)
+    integer :: i, ipart
+    logical found
+
+    interface
+      pure function ccc(a,b) result(ires)
+        use kinds_m, only : I4B
+        integer :: ires
+        integer(I4B), intent(in) :: a(:), b(:)
+      end function
+    end interface
+
+
+    ! Fill by N items
+    y0 = Get_array(nsize)
+
+    ys = Shuffle_array(y0)
+    call Insert_nodes(aobj, ys, ccc, IS_VALIDATED)
+
+    print '(a,i0,3x,i0,1x,i0)', 'Tree size / height ', &
+    & aobj%size(), aobj%height_range()
+    print *, 'log_2(size) =', log(real(aobj%size()))/log(2.0)
+
+call Print_nodes2(aobj)
+call Print_nodes(aobj)
+
+    ! Test that all items are present
+    ys = Shuffle_array(y0)
+    do i = 1, size(y0)
+       found = aobj % Exists(ys(i:i), ccc)
+       if (.not. found) then
+          print *, "ERROR TEST - ITEM NOT FOUND"
+          exit
+       endif
+    enddo
+
+
+    ! Remove part of items
+    ipart = nsize/2
+    ys = Shuffle_array(y0)
+    call Delete_nodes(aobj, ys(1:ipart), ccc, IS_VALIDATED)
+    yremoved = ys(1:ipart)
+    yinside = ys(ipart+1:nsize)
+
+    ! test, that removed are no longer in the tree
+    yremoved = Shuffle_array(yremoved)
+    yinside = Shuffle_array(yinside)
+
+    do i=1, size(yremoved)
+      found = aobj % Exists(yremoved(i:i), ccc)
+      if (found) then
+        print *, "ERROR TEST - ITEM FOUND, BUT SHOULD NOT"
+        exit
+      endif
+    enddo
+
+    do i=1, size(yinside)
+      found = aobj % Exists(yinside(i:i), ccc)
+      if (.not. found) then
+        print *, "ERROR TEST - ITEM NOT FOUND, BUT SHOULD "
+        exit
+      endif
+    enddo
+
+    ! remove all remaining
+   !call Delete_nodes(aobj, yinside, ccc, IS_VALIDATED)
+
+
+
+
+
+    !ys = Shuffle_array(y0)
+    !call Delete_nodes(aobj, ys, ccc, IS_VALIDATED)
+  end subroutine test3
+
+
 
 
 
