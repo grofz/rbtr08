@@ -1,16 +1,19 @@
+! Example #2
 !
-! Example #1
+! As example #1, but we created our tree class where we
+! over-ride the function Printcurrentnode
 !
   program example
-    use tree_m, only : rbtr_t, tree_mold
+    use tree_m, only : tree_mold
+    use mytree
     use usermodule, only : mytype, mytype_ptr, userfun
     implicit none
 
     type(mytype_ptr) :: adat
-    type(rbtr_t) :: tree
+    type(mytree_t)   :: tree
     integer :: ierr
 
-    print '(a)', 'Hello example #1 of using red-black tree container rbtr_t'
+    print '(a)', 'Hello example #2'
 
     ! Allocate and insert three nodes (INSERT)
     allocate(adat % ptr)
@@ -52,19 +55,16 @@
 
   contains
     subroutine Iterator(tree)
-      type(rbtr_t), intent(inout) :: tree
+      class(mytree_t), intent(inout) :: tree
 
       ! Iterate all nodes
-      call tree % Resetnode(ierr)
+      call tree % Firstnode(ierr)
       if (ierr == 0) then
         print *
         do
-          adat = transfer(tree % Readnext(ierr), adat)
-          if (ierr /= 0) exit
-
-          ! We can use value in adat
-          print *, 'Node = ', adat % ptr % a
           print *, ' ___ = ', tree % Printcurrentnode()
+          call tree % Nextnode(ierr)
+          if (ierr /= 0) exit
         enddo
       else
         print *

@@ -1,7 +1,5 @@
   module tree_tests_m
-    use basetree_m, only : basetree_t
-    use rbtr_m, only : rbtr_t
-    use tree_common_m, only : DAT_KIND, cfun_abstract
+    use tree_m, only : DAT_KIND, cfun_abstract, basetree_t, rbtr_t
     implicit none
     private
     public Insert_nodes, Print_nodes, Print_nodes2, Delete_nodes
@@ -18,15 +16,18 @@
 ! Insert all array elements to the tree.
 ! If "isvalidated" == TRUE, then validate tree at every loop
 !
-      integer :: i
+      integer :: i, nodes0, nodes1
       logical :: isvalidated0, isvalid_bst, isvalid_rb
 
       isvalidated0 = .false.
       if (present(isvalidated)) isvalidated0 = isvalidated
+      print '(a,I0,a,L1,a)', &
+        'Inserting nodes...   {N=',size(arr_data), &
+        ' inter-validation=',isvalidated0,'}'
 
+      nodes0 = tree % Size()
       do i = 1, size(arr_data)
         call tree % Insert(arr_data(i:i), cfun)
-
         if (isvalidated0) then
           isvalid_bst = tree % Isvalid_BST(cfun)
           select type (tree)
@@ -38,6 +39,7 @@
           if (.not. (isvalid_rb .and. isvalid_bst)) exit
         endif
       enddo
+      nodes1 = tree % Size()
 
       ! If not validated in the loop, validate at the end
       if (.not. isvalidated0) then
@@ -50,14 +52,18 @@
         end select
       endif
 
-      print *, 'Insert_nodes: new / current =', &
-      & size(arr_data), tree % Size(), 'Validation: ', &
-      & isvalid_bst, isvalid_rb
-      
+      print '(a,l1,a,l1)', &
+          '  validated: red-black/bst ',isvalid_rb,'/', isvalid_bst
       if (.not. (isvalid_rb .and. isvalid_bst)) then
-        print *, 'WARNING: VALIDATION FAILS (inset_nodes)'
+        error stop "Tree invalidated during Insert_nodes"
       endif
 
+      print '(a,i0,ai0)', &
+         '  nodes: before/after ',nodes0,'/',nodes1
+      if (nodes1-nodes0 /= size(arr_data)) &
+        error stop "Insertion error during Insert_nodes"
+
+      print '(a)', '...done'
     end subroutine Insert_nodes
 
 
@@ -66,20 +72,20 @@
       class(basetree_t), intent(inout) :: tree
 
       integer :: ierr, i
-      integer, parameter :: ioneline = 10
+      integer, parameter :: IONELINE = 10
 
       call tree % Firstnode(ierr=ierr)
       if (ierr /= 0) then
-        print *, 'Tree is empty'
+        print '(a)', 'Print_nodes: tree is empty'
         return
       endif
       i = 0
-      write(*,'(a)') 'Print nodes:'
+      write(*,'(a)') 'Print_nodes:'
       do
         if (ierr /= 0) exit
         write(*,'(a)',advance='no') tree % Printcurrentnode()//' '
         i = i + 1
-        if (mod(i,ioneline)==0) write(*,*)
+        if (mod(i,IONELINE)==0) write(*,*)
         call tree % Nextnode(ierr=ierr)
       enddo
       write(*,*)
@@ -92,21 +98,24 @@
 
       integer :: ierr, i
       integer, allocatable :: dat(:)
-      integer, parameter :: ioneline = 15
+      integer, parameter :: IONELINE = 20
 
       call tree % Resetnode(ierr=ierr)
       if (ierr /= 0) then
-        print *, 'Tree is empty'
+        print '(a)', 'Print_nodes2: tree is empty'
         return
       endif
       i = 0
-      write(*,'(a)') 'Print nodes:'
+      write(*,'(a)') 'Print_nodes2:'
       do
         dat = tree % Readnext(ierr)
         if (ierr /= 0) exit
+        if (size(dat) /= 1) then
+          print *, 'TODO - formatting might fail now...'
+        endif
         write(*,'(i0,a)',advance='no') dat, ' '
         i = i + 1
-        if (mod(i,ioneline)==0) write(*,*)
+        if (mod(i,IONELINE)==0) write(*,*)
       enddo
       write(*,*)
     end subroutine Print_nodes2
@@ -121,12 +130,16 @@
 !
 ! Delete all array elements from the tree
 !
-      integer :: i
+      integer :: i, nodes0, nodes1
       logical :: exists, isvalid_bst, isvalid_rb, isvalidated0
 
       isvalidated0 = .false.
       if (present(isvalidated)) isvalidated0 = isvalidated
+      print '(a,I0,a,L1,a)', &
+        'Deleting nodes...   {N=',size(arr_data), &
+        ' inter-validation=',isvalidated0,'}'
 
+      nodes0 = tree % Size()
       do i = 1, size(arr_data)
         exists = tree % Exists(arr_data(i:i), cfun)
         if (exists) then
@@ -134,11 +147,11 @@
           class is (rbtr_t)
             call tree % Delete()
           class default
-            print *, 'normal deletion not implemented'
+            print *, 'TODO - basetree deletion not implemented'
             exit
           end select
         else
-          print *, 'node = ',arr_data(i),' not found'
+          print '(a,i0,a)', '  node=',arr_data(i),' not found'
         endif
 
         if (isvalidated0) then
@@ -152,6 +165,7 @@
           if (.not. (isvalid_rb .and. isvalid_bst)) exit
         endif
       enddo
+      nodes1 = tree % Size()
 
       ! If not validated in the loop, validate at the end
       if (.not. isvalidated0) then
@@ -163,12 +177,18 @@
           isvalid_rb = .true.
         end select
       endif
-      print *, 'Deleted_nodes: current nodes =', &
-      & tree % Size(), 'validated =', isvalid_bst, isvalid_rb
-
+      print '(a,l1,a,l1)', &
+          '  validated: red-black/bst ',isvalid_rb,'/', isvalid_bst
       if (.not. (isvalid_rb .and. isvalid_bst)) then
-        print *, 'WARNING: VALIDATION FAILS (inset_nodes)'
+        error stop "Tree invalidated during Delete_nodes"
       endif
+
+      print '(a,i0,ai0)', &
+         '  nodes: before/after ',nodes0,'/',nodes1
+      if (nodes0-nodes1 /= size(arr_data)) &
+          print '(a)', "WARNING: some nodes not deleted"
+
+      print '(a)', '...done'
     end subroutine Delete_nodes
 
 
@@ -176,7 +196,9 @@
     function Get_array(n) result (y)
       integer, allocatable :: y(:)
       integer, intent(in) :: n
-
+!
+! Fill array by integers in the range <1; n>
+!
       integer :: i
 
       allocate(y(n))
@@ -206,9 +228,5 @@
         yin0(ipick) = yin0(nleft)
       enddo
     end function Shuffle_array
-
-
-
-
 
   end module tree_tests_m

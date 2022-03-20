@@ -1,74 +1,9 @@
-!
-! Classes for a binary search tree (BST) container.
-!
-! grofz@vscht.cz
-! March 2022
-!
-! Version: Work in progress...
-!
-! Note for myself: This module is not encapsulated as properly as I would
-! like. Many components must be public, so extended types can operate.
-! In future, I might find a better method.
-! At the moment, I do not recommend this module is used only in modules
-! that extend this class. In applications, use extended classes, that 
-! might be encapsulated in a better way.
-!
-!
-!
-  module basetree_m
-    use tree_common_m
+  submodule(tree_m) basetree
     implicit none
-    private
-
-    public Rotate_left, Rotate_right, Is_right_child, Is_left_child
-    public Leftmost, Sibling
-
-    type, public :: basenode_t
-      ! rbtr_DeleteNode needs access to these components
-      class(basenode_t), pointer :: parent => null()
-      class(basenode_t), pointer :: left => null()
-      class(basenode_t), pointer :: right => null()
-      integer(DAT_KIND), allocatable :: dat(:)
-    contains
-      procedure :: Parentf
-      procedure :: Leftchild, Rightchild
-      procedure :: Grandparent
-      procedure :: Uncle
-      !final :: basenode_Destructor
-    end type basenode_t
-
-
-
-    type, public :: basetree_t
-      ! rbtr_m routines needs access to these components
-      private
-      class(basenode_t), pointer, public :: root => null()
-      class(basenode_t), pointer, public :: current => null()
-      integer, public :: nodes = 0
-    contains
-      procedure :: Insert => basetree_Insert
-      procedure :: Exists => basetree_Exists
-      procedure :: Read => basetree_Read
-      procedure :: ReadNext => basetree_ReadNext
-      procedure :: Resetnode => basetree_Resetnode
-      procedure :: Firstnode => basetree_Firstnode
-      procedure :: Nextnode => basetree_Nextnode
-      procedure :: Printcurrentnode
-      final :: basetree_Destructor
-      procedure :: Size => basetree_Nodes
-      procedure :: Isvalid_BST => basetree_Isvalid_BST
-      procedure :: Height_range => basetree_Height_range
-    end type basetree_t
-
-    interface basetree_t
-      module procedure basetree_Initialize
-    end interface basetree_t
-
-
 
   contains
 
-    function Printcurrentnode(this) result(str)
+    module function basetree_Printcurrentnode(this) result(str)
 !
 ! Display content of the "current" node
 !
@@ -81,11 +16,11 @@
         write(dat,*) this % current % dat
         str='['//trim(adjustl(dat))//']'
       endif
-    end function Printcurrentnode
+    end function basetree_Printcurrentnode
 
 
 
-    function basetree_Initialize() result(new)
+    module function basetree_Initialize() result(new)
       type(basetree_t) :: new
 !
 ! A dummy constructor doing nothing at the moment
@@ -94,7 +29,7 @@
 
 
 
-    subroutine basetree_Insert(this, dat, cfun, newnode)
+    module subroutine basetree_Insert(this, dat, cfun, newnode)
       class(basetree_t), intent(inout) :: this
       integer(DAT_KIND), intent(in) :: dat(:)
       procedure(cfun_abstract) :: cfun
@@ -180,7 +115,8 @@
 
 
 
-    logical function basetree_Exists(this, dat, cfun) result(exists)
+    module function basetree_Exists(this, dat, cfun) result(exists)
+      logical :: exists
       class(basetree_t), intent(inout) :: this
       integer(DAT_KIND), intent(in) :: dat(:)
       procedure(cfun_abstract) :: cfun
@@ -214,7 +150,7 @@
 
 
 
-    function basetree_Read(this, ierr) result(dat)
+    module function basetree_Read(this, ierr) result(dat)
       class(basetree_t), intent(in) :: this
       integer, optional, intent(out) :: ierr
       integer(DAT_KIND), allocatable :: dat(:)
@@ -242,7 +178,7 @@
 
 
 
-    function basetree_ReadNext(this, ierr) result(dat)
+    module function basetree_ReadNext(this, ierr) result(dat)
       class(basetree_t), intent(inout) :: this
       integer, optional, intent(out) :: ierr
       integer(DAT_KIND), allocatable :: dat(:)
@@ -290,18 +226,18 @@
 
 
 
-    function Parentf(n)
+    module function basenode_Parent(n) result(parentf)
       class(basenode_t), pointer :: parentf
       class(basenode_t), intent(in) :: n
 !
 ! Type bound function to allow access to private component of "basenode"
 !
       parentf => n % parent
-    end function Parentf  
+    end function basenode_Parent  
 
 
 
-    function Grandparent(n)
+    module function basenode_Grandparent(n) result(grandparent)
       class(basenode_t), pointer :: grandparent
       class(basenode_t), intent(in) :: n
 
@@ -313,30 +249,30 @@
       else
         grandparent => null()
       endif
-    end function Grandparent
+    end function basenode_Grandparent
 
 
 
-    function Leftchild(n)
+    module function basenode_Leftchild(n) result(leftchild)
       class(basenode_t), pointer :: leftchild
       class(basenode_t), intent(in) :: n
 
       leftchild => n % left
-    end function Leftchild
+    end function basenode_Leftchild
 
 
 
-    function Rightchild(n)
+    module function basenode_Rightchild(n) result(rightchild)
       class(basenode_t), pointer :: rightchild
       class(basenode_t), intent(in) :: n
 
       rightchild => n % right
-    end function Rightchild
+    end function basenode_Rightchild
 
 
 
-    function Sibling(n)
-      class(basenode_t), pointer :: sibling
+    module function Sibling(n) result(sb)
+      class(basenode_t), pointer :: sb
       class(basenode_t), intent(in), pointer :: n
 !
 ! Note: Unlile other "family" functions, this is not a type bound procedure
@@ -346,20 +282,20 @@
       p => n % Parentf()
       if (associated(p)) then
         if (associated(n, p % left)) then
-          sibling => p % right
+          sb => p % right
         elseif (associated(n, p % right)) then
-          sibling => p % left
+          sb => p % left
         else
           error stop 'basetree::Sibling ERROR. n is uknown to p'
         endif
       else
-        sibling => null()
+        sb => null()
       endif
     end function Sibling
 
 
 
-    function Uncle(n)
+    module function basenode_Uncle(n) result(uncle)
       class(basenode_t), pointer :: uncle
       class(basenode_t), intent(in) :: n
 
@@ -371,11 +307,11 @@
       else
         uncle => null()
       endif
-    end function Uncle
+    end function basenode_Uncle
 
 
 
-    subroutine Rotate_left(a, piv)
+    module subroutine Rotate_left(a, piv)
       class(basetree_t), intent(inout) :: a
       class(basenode_t), pointer :: piv
 !
@@ -429,7 +365,7 @@
 
 
 
-    subroutine Rotate_right(a, piv)
+    module subroutine Rotate_right(a, piv)
       class(basetree_t), intent(inout) :: a
       class(basenode_t), pointer :: piv
 !
@@ -483,7 +419,8 @@
     end subroutine Rotate_right
 
 
-    logical function Is_left_child(n)
+    module function Is_left_child(n)
+      logical :: Is_left_child
       class(basenode_t), intent(in), pointer :: n
 !
 ! Returns .false. when called with unassociated pointer.
@@ -507,7 +444,8 @@
 
 
 
-    logical function Is_right_child(n)
+    module function Is_right_child(n)
+      logical :: Is_right_child
       class(basenode_t), intent(in), pointer :: n
 !
 ! Returns .false. when called with unassociated pointer.
@@ -546,7 +484,8 @@
 
 
 
-    pure integer function basetree_Nodes(this)
+    pure module function basetree_Nodes(this)
+      integer :: basetree_Nodes
       class(basetree_t), intent(in) :: this
 !
 ! Type-bound function - return number of nodes in the tree
@@ -556,7 +495,7 @@
 
 
 
-    subroutine basetree_Firstnode(this, ierr)
+    module subroutine basetree_Firstnode(this, ierr)
       class(basetree_t), intent(inout) :: this
       integer, intent(out), optional :: ierr
 !
@@ -577,7 +516,7 @@
 
 
 
-    subroutine basetree_Resetnode(this, ierr)
+    module subroutine basetree_Resetnode(this, ierr)
       class(basetree_t), intent(inout) :: this
       integer, intent(out), optional :: ierr
 !
@@ -594,7 +533,7 @@
 
 
 
-    subroutine basetree_Nextnode(this, ierr)
+    module subroutine basetree_Nextnode(this, ierr)
       class(basetree_t), intent(inout) :: this
       integer, intent(out), optional :: ierr
 !
@@ -645,7 +584,7 @@
 
       oldnode => n
       do
-        Successor => Parentf(oldnode)
+        Successor => oldnode % Parentf()
 
         ! no more parents, null pointer is returned
         if (.not. associated(Successor)) exit
@@ -660,29 +599,29 @@
 
         ! parent of a right child is not the next node, but its
         ! grandparent can be...
-        oldnode => Parentf(oldnode)
+        oldnode => oldnode % Parentf()
       enddo
     end function Successor
 
 
 
-    function Leftmost(n)
-      class(basenode_t), pointer :: Leftmost
+    module function Leftmost(n) result(lm)
+      class(basenode_t), pointer :: lm
       class(basenode_t), pointer, intent(in) :: n
 !
 ! Fails if called with a null pointer, always returns associated pointer.
 !
       if (.not. associated(n)) error stop "Leftmost called with nil node"
-      Leftmost => n
+      lm => n
       do
-        if (.not. associated(Leftmost % left)) exit
-        Leftmost => Leftmost % left
+        if (.not. associated(lm % left)) exit
+        lm => lm % left
       enddo
     end function Leftmost
 
 
 
-    function basetree_Isvalid_BST(this, cfun) result(isvalid)
+    module function basetree_Isvalid_BST(this, cfun) result(isvalid)
       logical :: isvalid
       class(basetree_t), intent(in) :: this
       procedure(cfun_abstract) :: cfun
@@ -802,7 +741,7 @@
 
 
 
-    function basetree_Height_range(this) result(ht)
+    module function basetree_Height_range(this) result(ht)
        integer :: ht(2)
        class(basetree_t), intent(in) :: this
        call recurse_HR(this % root, ht(1), ht(2))
@@ -841,7 +780,7 @@
 
 
 
-    subroutine basetree_Destructor(this)
+    module subroutine basetree_Destructor(this)
       type(basetree_t), intent(inout) :: this
 !
 ! Finalize the "basetree_t" object
@@ -849,7 +788,7 @@
       integer :: counter
 
       counter = 0
-print *, 'In basetree_Delete...'
+print *, 'In basetree_Destructor...'
       if (associated(this % root)) call delete_recurse(this % root, counter)
 print *, '...deleted nodes = ', counter
 
@@ -888,7 +827,5 @@ print *, '...deleted nodes = ', counter
       deallocate(n)
       counter = ileft + iright + 1
     end subroutine delete_recurse
-    
 
-
-  end module basetree_m
+  end submodule basetree

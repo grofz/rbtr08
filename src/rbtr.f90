@@ -1,38 +1,13 @@
-  module rbtr_m
-    use tree_common_m
-    use basetree_m
-    use kinds_m, only : I1B
+!
+! Red black tree implementation
+!
+  submodule(tree_m) rbtr
+
     implicit none
-    private
-
-    integer(I1B), parameter :: RED_NODE = 1, BLACK_NODE = 0
-
-    type, public, extends(basenode_t) :: rbnode_t
-      private
-      integer(I1B) :: color = RED_NODE
-    contains
-    end type rbnode_t
-
-
-
-    type, public, extends(basetree_t) :: rbtr_t
-      private
-    contains
-      procedure :: Insert => rbtr_Insert
-      procedure :: Delete => rbtr_Delete
-      procedure :: Isvalid_rbtree => rbtr_Isvalid_rbtree
-      procedure :: Printcurrentnode
-    end type rbtr_t
-
-    interface rbtr_t
-      module procedure rbtr_Initialize
-    end interface rbtr_t
-
-
 
   contains
 
-    function Printcurrentnode(this) result(str)
+    module function rbtr_Printcurrentnode(this) result(str)
       character(len=:), allocatable :: str
       class(rbtr_t), intent(in) :: this
       character(len=1000) :: color
@@ -46,18 +21,18 @@
           str = str//'{'//trim(adjustl(color))//'}'
         end select
       endif
-    end function
+    end function rbtr_Printcurrentnode
 
 
 
-    function rbtr_Initialize() result(new)
+    module function rbtr_Initialize() result(new)
       type(rbtr_t) :: new
 !     allocate(rbnode_t :: new % typet)
     end function rbtr_Initialize
 
 
 
-    subroutine rbtr_Insert(this, dat, cfun, newnode)
+    module subroutine rbtr_Insert(this, dat, cfun, newnode)
       class(rbtr_t), intent(inout)  :: this
       integer(DAT_KIND), intent(in) :: dat(:)
       procedure(cfun_abstract)      :: cfun
@@ -186,7 +161,7 @@
 
 
 
-    function rbtr_Isvalid_rbtree(this) result(isvalid)
+    module function rbtr_Isvalid_rbtree(this) result(isvalid)
       logical :: isvalid
       class(rbtr_t), intent(in) :: this
 !
@@ -253,7 +228,7 @@
 
 
 
-    subroutine rbtr_Delete(this, ierr)
+    module subroutine rbtr_Delete(this, ierr)
       class(rbtr_t), intent(inout) :: this
       integer, optional, intent(out) :: ierr
 !
@@ -532,5 +507,4 @@
       endif
     end subroutine delete_case6
 
-
-  end module rbtr_m
+  end submodule rbtr
