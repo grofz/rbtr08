@@ -756,8 +756,8 @@
       integer :: hmin_left, hmin_right, hmax_left, hmax_right
 
       if (.not. associated(n)) then
-        hmin = 0
-        hmax = 0
+        hmin = -1
+        hmax = -1
         return
       endif
       call recurse_HR(n % Leftchild(), hmin_left, hmax_left)
@@ -827,5 +827,115 @@ print *, '...deleted nodes = ', counter
       deallocate(n)
       counter = ileft + iright + 1
     end subroutine delete_recurse
+
+
+
+    subroutine basetree_Display(this)
+      class(basetree_t), intent(in) :: this
+
+      integer :: ch, gap, line, n, level, maxlevel
+      integer :: i
+      class(basenode_t), pointer :: root
+      type ptr_t
+        class(basenode_t), pointer :: p
+      end type ptr_t
+      type(ptr_t), allocatable :: queue(:)
+      type(ptr_t) :: item, lc, rc
+
+
+      ch = 2    ! item width (TODO)
+      line = 100 ! line length
+      maxlevel = 5
+      level = -1
+
+      allocate(queue(0))
+      item % p => this % root
+      queue = enqueue(queue, item)
+
+      print '(a)', '12345678901234567890123456789012345678901234567890123456789012345678901234567890'
+      do
+        level = level + 1
+        n = 2**(level)
+        gap = max((line-n*ch)/(n), 0)
+        do i=1,n
+          queue = dequeue(queue, item)
+          if (i==1) then
+            call print_node(null(), gap/2)
+          else
+            call print_node(null(), gap)
+          endif
+          call print_node(item % p, ch)
+
+          if (associated(item % p)) then
+            lc % p => item % p % Leftchild()
+            rc % p => item % p % Rightchild()
+          else
+            lc % p => null()
+            rc % p => null()
+          endif
+          queue = enqueue(queue, lc)
+          queue = enqueue(queue, rc)
+        enddo
+        write(*,*)
+        if (level >= maxlevel) exit
+      enddo
+      print '(a)', '1234567890         01234567890         01234567890         012345678901234567890'
+
+    contains
+
+      function enqueue(pin, new) result(pout)
+        type(ptr_t), intent(in) :: pin(:)
+        type(ptr_t), intent(in) :: new
+        type(ptr_t), allocatable :: pout(:)
+        integer :: n
+        n = size(pin)
+        allocate(pout(n+1))
+        pout(1:n) = pin
+        pout(n+1) = new
+      end function enqueue
+
+      function dequeue(pin, removed) result(pout)
+        type(ptr_t), intent(in) :: pin(:)
+        type(ptr_t), intent(out) :: removed
+        type(ptr_t), allocatable :: pout(:)
+        integer :: n
+        n = size(pin)
+        if (n==0) error stop 'dequeue empty'
+        allocate(pout(n-1))
+        removed = pin(1)
+        pout = pin(2:n)
+      end function dequeue
+    end subroutine basetree_Display
+
+
+
+    subroutine print_node(node, ch)
+      class(basenode_t), intent(in), pointer :: node
+      integer, intent(in) :: ch
+!
+! print node on screen, width is "ch" characters
+! node can be empty pointer
+!
+      integer, parameter :: MAXBUF = 200
+      character(len=MAXBUF) :: prepare
+      character(len=:), allocatable :: buffer
+      integer :: i
+
+        ! temporary - works for integers
+      write(prepare,*) ch
+      buffer = '(i'//trim(adjustl(prepare))//')'
+      do i=1,MAXBUF
+        prepare(i:i) = ' '
+      enddo
+
+      if (associated(node)) then
+        ! temporary - must take actual value
+        write(prepare,fmt=buffer) node % dat(1)
+      endif
+      write(*,'(a)',advance='no') prepare(1:ch)
+    end subroutine print_node
+
+
+
 
   end submodule basetree

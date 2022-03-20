@@ -7,7 +7,7 @@
     read(*,*) n
     print *
 
-    !call test2()
+    call test2()
 
     is_validated = .false.
     if (n < 1001) is_validated = .true.
@@ -29,9 +29,11 @@
 
     print *, 'RUNING TEST #2 '
     call Insert_nodes(aobj, [10, 7, 5, 2, 6, 3], compare_nodes_fun)
+    call Insert_nodes(aobj, [1, 4, 8, 12, 16, 9], compare_nodes_fun)
     call Print_nodes(aobj)
     print *, 'Height of tree is: ', aobj % Height_range()
     print *
+ call aobj % Display()
 
     call Print_nodes(bobj)
     call Insert_nodes(bobj, [10, 20, 30, 40, 50, 60], compare_nodes_fun)
@@ -39,11 +41,13 @@
     call Print_nodes(bobj)
     print *, 'Height of basetree is: ', bobj % Height_range()
     print *
+ call bobj % Display()
 
     call Insert_nodes(cobj, [10, 5, 7, 8, 9, 11, 12, 13], compare_nodes_fun)
     call Print_nodes(cobj)
     print *, 'Height of tree is: ', cobj % Height_range()
     print *
+ call cobj % Display()
 
   end subroutine test2
 

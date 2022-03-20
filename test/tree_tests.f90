@@ -42,7 +42,7 @@
       nodes1 = tree % Size()
 
       ! If not validated in the loop, validate at the end
-      if (.not. isvalidated0) then
+      if (.not. isvalidated0 .or. size(arr_data) < 1) then
         isvalid_bst = tree % Isvalid_BST(cfun)
         select type (tree)
         class is (rbtr_t)
@@ -168,7 +168,7 @@
       nodes1 = tree % Size()
 
       ! If not validated in the loop, validate at the end
-      if (.not. isvalidated0) then
+      if (.not. isvalidated0 .or. size(arr_data) < 1) then
         isvalid_bst = tree % Isvalid_BST(cfun)
         select type (tree)
         class is (rbtr_t)

@@ -70,6 +70,7 @@
       procedure :: Size => basetree_Nodes
       procedure :: Isvalid_BST => basetree_Isvalid_BST
       procedure :: Height_range => basetree_Height_range
+      procedure :: Display => basetree_Display
     end type basetree_t
 
     interface basetree_t
@@ -146,6 +147,10 @@
       module subroutine basetree_Destructor(this)
         type(basetree_t), intent(inout) :: this
       end subroutine basetree_Destructor
+
+      module subroutine basetree_Display(this)
+        class(basetree_t), intent(in) :: this
+      end subroutine basetree_Display
     end interface
 
 
