@@ -18,23 +18,23 @@
     ! Allocate and insert three nodes (INSERT)
     allocate(adat % ptr)
     adat % ptr % a = 123.45
-    call tree % Insert(transfer(adat,tree_mold), userfun)
+    call tree % Insert(transfer(adat,tree_mold))
 
     allocate(adat % ptr)
     adat % ptr % a = 10.0
-    call tree % Insert(transfer(adat,tree_mold), userfun)
+    call tree % Insert(transfer(adat,tree_mold))
 
     allocate(adat % ptr)
     adat % ptr % a = 900.0
-    call tree % Insert(transfer(adat,tree_mold), userfun)
+    call tree % Insert(transfer(adat,tree_mold))
 
     ! Search for a node
     ! EXISTS, SIZE, ISVALID_BST, ISVALID_RBTREE, HEIGHT_RANGE
     write(*,'(a)',advance='no') 'Is the last element in the tree?  '
-    write(*,'(L1)') tree % Exists(transfer(adat,tree_mold), userfun)
+    write(*,'(L1)') tree % Exists(transfer(adat,tree_mold))
 
     print '(a,L1,1x,L2)', 'Is tree valid?  ', &
-    &  tree % Isvalid_rbtree(), tree % Isvalid_bst(userfun)
+    &  tree % Isvalid_rbtree(), tree % Isvalid_bst()
     print '(a,i0,a,i0,1x,i0)', 'Tree size =', tree % size(), &
     &       ' height range=', tree % Height_range()
 

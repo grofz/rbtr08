@@ -34,10 +34,9 @@
 
 
 
-    module subroutine rbtr_Insert(this, dat, cfun, newnode)
+    module subroutine rbtr_Insert(this, dat, newnode)
       class(rbtr_t), intent(inout)  :: this
       integer(DAT_KIND), intent(in) :: dat(:)
-      procedure(compare_fun)      :: cfun
       class(basenode_t), pointer, optional :: newnode
 !
 ! Insert a node to a red-black tree.
@@ -64,7 +63,7 @@
         error stop "rbtr_Insert: newnode must be an extension of rbnode_t"
       end select
 
-      call this % basetree_t % Insert(dat, cfun, newnode=new0)
+      call this % basetree_t % Insert(dat, newnode=new0)
 
       call insert_repair_tree(this, new0)
     end subroutine rbtr_Insert

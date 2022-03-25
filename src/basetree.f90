@@ -31,10 +31,9 @@
 
 
 
-    module subroutine basetree_Insert(this, dat, cfun, newnode)
+    module subroutine basetree_Insert(this, dat, newnode)
       class(basetree_t), intent(inout) :: this
       integer(DAT_KIND), intent(in) :: dat(:)
-      procedure(compare_fun) :: cfun
       class(basenode_t), pointer, optional :: newnode
 !
 ! Insert a new node to the tree.
@@ -120,11 +119,10 @@
 
 
 
-    module function basetree_Exists(this, dat, cfun) result(exists)
+    module function basetree_Exists(this, dat) result(exists)
       logical :: exists
       class(basetree_t), intent(inout) :: this
       integer(DAT_KIND), intent(in) :: dat(:)
-      procedure(compare_fun) :: cfun
 !
 ! Return TRUE and set current pointer on the node if the node
 ! with the value "dat" is present in the tree.
@@ -629,10 +627,9 @@
 
 
 
-    module function basetree_Isvalid_BST(this, cfun) result(isvalid)
+    module function basetree_Isvalid_BST(this) result(isvalid)
       logical :: isvalid
       class(basetree_t), intent(in) :: this
-      procedure(compare_fun) :: cfun
 !
 ! Verify that the tree is a valid BST tree
 !

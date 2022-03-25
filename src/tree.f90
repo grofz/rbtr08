@@ -91,18 +91,16 @@
         character(len=:), allocatable :: str
       end function basetree_Printcurrentnode
 
-      module subroutine basetree_Insert(this, dat, cfun, newnode)
+      module subroutine basetree_Insert(this, dat, newnode)
         class(basetree_t), intent(inout) :: this
         integer(DAT_KIND), intent(in) :: dat(:)
-        procedure(compare_fun) :: cfun
         class(basenode_t), pointer, optional :: newnode
       end subroutine basetree_Insert
 
-      module function basetree_Exists(this, dat, cfun) result(exists)
+      module function basetree_Exists(this, dat) result(exists)
         logical :: exists
         class(basetree_t), intent(inout) :: this
         integer(DAT_KIND), intent(in) :: dat(:)
-        procedure(compare_fun) :: cfun
       end function basetree_Exists
 
       module function basetree_Read(this, ierr) result(dat)
@@ -137,10 +135,9 @@
         integer, intent(out), optional :: ierr
       end subroutine basetree_Nextnode
 
-      module function basetree_Isvalid_BST(this, cfun) result(isvalid)
+      module function basetree_Isvalid_BST(this) result(isvalid)
         logical :: isvalid
         class(basetree_t), intent(in) :: this
-        procedure(compare_fun) :: cfun
       end function basetree_Isvalid_BST
 
       module function basetree_Height_range(this) result(ht)
@@ -252,10 +249,9 @@
         class(rbtr_t), intent(in) :: this
       end function rbtr_Printcurrentnode
 
-      module subroutine rbtr_Insert(this, dat, cfun, newnode)
+      module subroutine rbtr_Insert(this, dat, newnode)
         class(rbtr_t), intent(inout) :: this
         integer(DAT_KIND), intent(in) :: dat(:)
-        procedure(compare_fun) :: cfun
         class(basenode_t), pointer, optional :: newnode
       end subroutine rbtr_Insert
 

@@ -7,10 +7,9 @@
 
     contains
 
-    subroutine Insert_nodes(tree, arr_data, cfun, isvalidated)
+    subroutine Insert_nodes(tree, arr_data, isvalidated)
       class(basetree_t), intent(inout) :: tree
       integer(DAT_KIND), intent(in) :: arr_data(:)
-      procedure(compare_fun) :: cfun
       logical, optional, intent(in) :: isvalidated
 !
 ! Insert all array elements to the tree.
@@ -27,9 +26,9 @@
 
       nodes0 = tree % Size()
       do i = 1, size(arr_data)
-        call tree % Insert(arr_data(i:i), cfun)
+        call tree % Insert(arr_data(i:i))
         if (isvalidated0) then
-          isvalid_bst = tree % Isvalid_BST(cfun)
+          isvalid_bst = tree % Isvalid_BST()
           select type (tree)
           class is (rbtr_t)
             isvalid_rb = tree % Isvalid_rbtree()
@@ -43,7 +42,7 @@
 
       ! If not validated in the loop, validate at the end
       if (.not. isvalidated0 .or. size(arr_data) < 1) then
-        isvalid_bst = tree % Isvalid_BST(cfun)
+        isvalid_bst = tree % Isvalid_BST()
         select type (tree)
         class is (rbtr_t)
           isvalid_rb = tree % Isvalid_rbtree()
@@ -122,10 +121,9 @@
 
 
 
-    subroutine Delete_nodes(tree, arr_data, cfun, isvalidated)
+    subroutine Delete_nodes(tree, arr_data, isvalidated)
       class(basetree_t), intent(inout) :: tree
       integer(DAT_KIND), intent(in) :: arr_data(:)
-      procedure(compare_fun) :: cfun
       logical, intent(in), optional :: isvalidated
 !
 ! Delete all array elements from the tree
@@ -141,7 +139,7 @@
 
       nodes0 = tree % Size()
       do i = 1, size(arr_data)
-        exists = tree % Exists(arr_data(i:i), cfun)
+        exists = tree % Exists(arr_data(i:i))
         if (exists) then
           select type(tree)
           class is (rbtr_t)
@@ -155,7 +153,7 @@
         endif
 
         if (isvalidated0) then
-          isvalid_bst = tree % Isvalid_BST(cfun)
+          isvalid_bst = tree % Isvalid_BST()
           select type (tree)
           class is (rbtr_t)
             isvalid_rb = tree % Isvalid_rbtree()
@@ -169,7 +167,7 @@
 
       ! If not validated in the loop, validate at the end
       if (.not. isvalidated0 .or. size(arr_data) < 1) then
-        isvalid_bst = tree % Isvalid_BST(cfun)
+        isvalid_bst = tree % Isvalid_BST()
         select type (tree)
         class is (rbtr_t)
           isvalid_rb = tree % Isvalid_rbtree()

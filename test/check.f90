@@ -33,22 +33,22 @@
 
 
     print *, 'RUNING TEST #2 '
-    call Insert_nodes(aobj, [10, 7, 5, 2, 6, 3], compare_nodes_fun)
-    call Insert_nodes(aobj, [1, 4, 8, 12, 16, 9], compare_nodes_fun)
+    call Insert_nodes(aobj, [10, 7, 5, 2, 6, 3] )
+    call Insert_nodes(aobj, [1, 4, 8, 12, 16, 9])
     call Print_nodes(aobj)
     print *, 'Height of tree is: ', aobj % Height_range()
     print *
  call aobj % Display()
 
     call Print_nodes(bobj)
-    call Insert_nodes(bobj, [10, 20, 30, 40, 50, 60], compare_nodes_fun)
-    call Insert_nodes(bobj, [21], compare_nodes_fun)
+    call Insert_nodes(bobj, [10, 20, 30, 40, 50, 60])
+    call Insert_nodes(bobj, [21])
     call Print_nodes(bobj)
     print *, 'Height of basetree is: ', bobj % Height_range()
     print *
  call bobj % Display()
 
-    call Insert_nodes(cobj, [10, 5, 7, 8, 9, 11, 12, 13], compare_nodes_fun)
+    call Insert_nodes(cobj, [10, 5, 7, 8, 9, 11, 12, 13])
     call Print_nodes(cobj)
     print *, 'Height of tree is: ', cobj % Height_range()
     print *
@@ -79,7 +79,7 @@
     ! Fill by N items
     y0 = Get_array(nsize)
     ys = Shuffle_array(y0)
-    call Insert_nodes(tree, ys, compare_nodes_fun, IS_VALIDATED)
+    call Insert_nodes(tree, ys, IS_VALIDATED)
 
     ! Height of the tree
     hr = tree % Height_range()
@@ -98,7 +98,7 @@
     is_pass = .true.
     write(*,'(a)', advance='no') 'All inserted nodes exists?  '
     do i = 1, size(y0)
-      found = tree % Exists(ys(i:i), compare_nodes_fun)
+      found = tree % Exists(ys(i:i))
       if (.not. found) then
         is_pass = .false.
         exit
@@ -111,7 +111,7 @@
     ! Remove part of items
     ipart = nsize/2
     ys = Shuffle_array(y0)
-    call Delete_nodes(tree, ys(1:ipart), compare_nodes_fun, IS_VALIDATED)
+    call Delete_nodes(tree, ys(1:ipart), IS_VALIDATED)
     yremoved = ys(1:ipart)
     yinside = ys(ipart+1:nsize)
 
@@ -121,7 +121,7 @@
     is_pass = .true.
     write(*,'(a)', advance='no') 'All deleted nodes no longer exists?  '
     do i=1, size(yremoved)
-      found = tree % Exists(yremoved(i:i), compare_nodes_fun)
+      found = tree % Exists(yremoved(i:i))
       if (found) then
         is_pass = .false.
         exit
@@ -134,7 +134,7 @@
     is_pass = .true.
     write(*,'(a)', advance='no') 'But remaining nodes still exists?  '
     do i=1, size(yinside)
-      found = tree % Exists(yinside(i:i), compare_nodes_fun)
+      found = tree % Exists(yinside(i:i))
       if (.not. found) then
         is_pass = .false.
         exit
@@ -146,7 +146,7 @@
     ! some nodes left to be removed by basetree_destructor
     print '(a,i0)', 'Nodes left for destructor to remove: ',size(yinside)
     print *
-    !call Delete_nodes(tree, yinside, compare_nodes_fun)
+    !call Delete_nodes(tree, yinside)
 
   end subroutine test3
 
