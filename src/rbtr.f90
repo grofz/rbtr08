@@ -34,10 +34,10 @@
 
 
 
-    module subroutine rbtr_Insert(this, dat, newnode)
+    module subroutine rbtr_Add(this, dat, ierr)
       class(rbtr_t), intent(inout)  :: this
       integer(DAT_KIND), intent(in) :: dat(:)
-      class(basenode_t), pointer, optional :: newnode
+      integer, intent(out), optional :: ierr
 !
 ! Insert a node to a red-black tree.
 ! [over-riding type-bound procedure in "basetree" class]
@@ -45,17 +45,15 @@
 ! Get a new node as "rbnode_t" and call insertion procedure of a base class.
 ! Then repair the tree.
 !
+!TODO rbtr_Add a rbtr_Add2 jsou kandidati na slouceni
+!
+      integer :: ierr0
       class(basenode_t), pointer :: new0
 
       if (.not. associated(this % cfun)) &
           error stop 'rbtr_Insert: cfun procedure pointer not associated'
 
-      if (present(newnode)) then
-        ! already allocated node can be used if necessary
-        new0 => newnode
-      else
-        allocate(rbnode_t :: new0)
-      endif
+      allocate(rbnode_t :: new0)
       select type(new0)
       class is (rbnode_t)
         new0 % color = RED_NODE
@@ -63,10 +61,29 @@
         error stop "rbtr_Insert: newnode must be an extension of rbnode_t"
       end select
 
-      call this % basetree_t % Insert(dat, newnode=new0)
+      call this % basetree_t % Add2(dat, newnode=new0, ierr=ierr0)
 
-      call insert_repair_tree(this, new0)
-    end subroutine rbtr_Insert
+      if (ierr0 == ERR_CONT_OK) call insert_repair_tree(this, new0)
+
+      if (present(ierr)) then
+        ierr = ierr0
+      elseif (ierr0 /= ERR_CONT_OK) then
+        error stop 'rbtree_Add: element already in the tree'
+      endif
+    end subroutine rbtr_Add
+
+
+
+    module subroutine rbtr_Add2(this, dat, newnode, ierr)
+      class(rbtr_t), intent(inout)  :: this
+      integer(DAT_KIND), intent(in) :: dat(:)
+      class(basenode_t), pointer, optional :: newnode
+      integer, intent(out), optional :: ierr
+! [over-riding type-bound procedure in "basetree" class]
+! call Add instead
+
+      error stop "rbtr_Add2 should not be called."
+    end subroutine rbtr_Add2
 
 
 
@@ -232,32 +249,42 @@
 
 
 
-    module subroutine rbtr_Delete(this, ierr)
+    module subroutine rbtr_Delete(this, dat, ierr)
       class(rbtr_t), intent(inout) :: this
+      integer(DAT_KIND), intent(in) :: dat(:)
       integer, optional, intent(out) :: ierr
 !
-! Remove current node from the red-black tree
+! Remove node from the red-black tree
 !
       logical :: lfreed
       integer :: ierr0
       class(basenode_t), pointer :: n, ch
 
-      ierr0 = TREE_ERR_OK
-      if (.not. associated(this % root)) then
-        ierr0 = TREE_ERR_EMPTY
-      elseif (.not. associated(this % current)) then
-        ierr0 = TREE_ERR_NOCURRENT
+      n => search_node(this, dat)
+      if (associated(n)) then
+        ierr0 = ERR_CONT_OK
+      else
+        ierr0 = ERR_CONT_ISNOT
       endif
+
+      !ierr0 = TREE_ERR_OK
+      !if (.not. associated(this % root)) then
+      !  ierr0 = TREE_ERR_EMPTY
+      !elseif (.not. associated(this % current)) then
+      !  ierr0 = TREE_ERR_NOCURRENT
+      !endif
 
       if (present(ierr)) then
         ierr = ierr0
-        if (ierr0 /= TREE_ERR_OK) return
+        !if (ierr0 /= TREE_ERR_OK) return
+        if (ierr0 /= ERR_CONT_OK) return
       else
-        if (ierr0 /= TREE_ERR_OK) &
-        &   error stop "rbtr_Delete: empty tree or null current pointer"
+        !if (ierr0 /= TREE_ERR_OK) &
+        !&   error stop "rbtr_Delete: empty tree or null current pointer"
+        if (ierr0 /= ERR_CONT_OK) &
+            error stop 'rbtr_Delete, element not in the tree'
       endif
-
-      n => this % current
+      !n => this % current
 
 
       ! CASE I: N has two children

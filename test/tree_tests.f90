@@ -26,7 +26,7 @@
 
       nodes0 = tree % Size()
       do i = 1, size(arr_data)
-        call tree % Insert(arr_data(i:i))
+        call tree % Add(arr_data(i:i))
         if (isvalidated0) then
           isvalid_bst = tree % Isvalid_BST()
           select type (tree)
@@ -139,11 +139,11 @@
 
       nodes0 = tree % Size()
       do i = 1, size(arr_data)
-        exists = tree % Exists(arr_data(i:i))
+        exists = tree % Isin(arr_data(i:i))
         if (exists) then
           select type(tree)
           class is (rbtr_t)
-            call tree % Delete()
+            call tree % remove(arr_data(i:i))
           class default
             print *, 'TODO - basetree deletion not implemented'
             exit

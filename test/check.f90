@@ -98,7 +98,7 @@
     is_pass = .true.
     write(*,'(a)', advance='no') 'All inserted nodes exists?  '
     do i = 1, size(y0)
-      found = tree % Exists(ys(i:i))
+      found = tree % Isin(ys(i:i))
       if (.not. found) then
         is_pass = .false.
         exit
@@ -121,7 +121,7 @@
     is_pass = .true.
     write(*,'(a)', advance='no') 'All deleted nodes no longer exists?  '
     do i=1, size(yremoved)
-      found = tree % Exists(yremoved(i:i))
+      found = tree % Isin(yremoved(i:i))
       if (found) then
         is_pass = .false.
         exit
@@ -134,7 +134,7 @@
     is_pass = .true.
     write(*,'(a)', advance='no') 'But remaining nodes still exists?  '
     do i=1, size(yinside)
-      found = tree % Exists(yinside(i:i))
+      found = tree % Isin(yinside(i:i))
       if (.not. found) then
         is_pass = .false.
         exit

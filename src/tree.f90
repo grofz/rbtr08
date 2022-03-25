@@ -61,8 +61,10 @@
       integer :: nodes = 0
       procedure(compare_fun), pointer, nopass, public :: cfun => null()
     contains
-      procedure :: Insert => basetree_Insert
-      procedure :: Exists => basetree_Exists
+      !procedure :: Initialize => basetree_Initialize
+      procedure :: Add => basetree_Add
+      procedure :: Add2 => basetree_Add2
+      procedure :: Isin => basetree_Isin
       procedure :: Read => basetree_Read
       procedure :: ReadNext => basetree_ReadNext
       procedure :: Resetnode => basetree_Resetnode
@@ -91,17 +93,30 @@
         character(len=:), allocatable :: str
       end function basetree_Printcurrentnode
 
-      module subroutine basetree_Insert(this, dat, newnode)
+      module subroutine basetree_Add(this, dat, ierr)
+        class(basetree_t), intent(inout) :: this
+        integer(DAT_KIND), intent(in) :: dat(:)
+        integer, intent(out), optional :: ierr
+      end subroutine basetree_Add
+
+      module subroutine basetree_Add2(this, dat, newnode, ierr)
         class(basetree_t), intent(inout) :: this
         integer(DAT_KIND), intent(in) :: dat(:)
         class(basenode_t), pointer, optional :: newnode
-      end subroutine basetree_Insert
+        integer, intent(out), optional :: ierr
+      end subroutine basetree_Add2
 
-      module function basetree_Exists(this, dat) result(exists)
+      module function basetree_Isin(this, dat) result(exists)
         logical :: exists
-        class(basetree_t), intent(inout) :: this
+        class(basetree_t), intent(in) :: this
         integer(DAT_KIND), intent(in) :: dat(:)
-      end function basetree_Exists
+      end function basetree_Isin
+
+      module function search_node(this, dat) result(foundnode)
+        class(basenode_t), pointer :: foundnode
+        class(basetree_t), intent(in) :: this
+        integer(DAT_KIND), intent(in) :: dat(:)
+      end function
 
       module function basetree_Read(this, ierr) result(dat)
         class(basetree_t), intent(in) :: this
@@ -228,8 +243,9 @@
     type, extends(basetree_t) :: rbtr_t
       private
     contains
-      procedure :: Insert => rbtr_Insert
-      procedure :: Delete => rbtr_Delete
+      procedure :: Add => rbtr_Add
+      procedure :: Add2 => rbtr_Add2
+      procedure :: Remove => rbtr_Delete
       procedure :: Isvalid_rbtree => rbtr_Isvalid_rbtree
       procedure :: Printcurrentnode => rbtr_Printcurrentnode
     end type rbtr_t
@@ -249,19 +265,27 @@
         class(rbtr_t), intent(in) :: this
       end function rbtr_Printcurrentnode
 
-      module subroutine rbtr_Insert(this, dat, newnode)
+      module subroutine rbtr_Add(this, dat, ierr)
+        class(rbtr_t), intent(inout) :: this
+        integer(DAT_KIND), intent(in) :: dat(:)
+        integer, intent(out), optional :: ierr
+      end subroutine rbtr_Add
+
+      module subroutine rbtr_Add2(this, dat, newnode, ierr)
         class(rbtr_t), intent(inout) :: this
         integer(DAT_KIND), intent(in) :: dat(:)
         class(basenode_t), pointer, optional :: newnode
-      end subroutine rbtr_Insert
+        integer, intent(out), optional :: ierr
+      end subroutine rbtr_Add2
 
       module function rbtr_Isvalid_rbtree(this) result(isvalid)
         logical :: isvalid
         class(rbtr_t), intent(in) :: this
       end function rbtr_Isvalid_rbtree
 
-      module subroutine rbtr_Delete(this, ierr)
+      module subroutine rbtr_Delete(this, dat, ierr)
         class(rbtr_t), intent(inout) :: this
+        integer(DAT_KIND), intent(in) :: dat(:)
         integer, optional, intent(out) :: ierr
       end subroutine rbtr_Delete
     end interface

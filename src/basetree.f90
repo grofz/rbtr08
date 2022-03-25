@@ -24,17 +24,38 @@
       type(basetree_t) :: new
       procedure(compare_fun) :: cfun
 !
-! A dummy constructor doing nothing at the moment
+! A compulsory constructor
 !
       new % cfun => cfun
     end function basetree_Initialize
 
 
 
-    module subroutine basetree_Insert(this, dat, newnode)
+    module subroutine basetree_Add(this, dat, ierr)
+      class(basetree_t), intent(inout) :: this
+      integer(DAT_KIND), intent(in) :: dat(:)
+      integer, intent(out), optional :: ierr
+!
+! Add node (for basetree type only)
+!
+      integer :: ierr0
+      class(basenode_t), pointer :: newnode
+      allocate(basenode_t :: newnode)
+      call basetree_Add2(this, dat, newnode, ierr0)
+      if (present(ierr)) then
+        ierr = ierr0
+      elseif (ierr0 /= ERR_CONT_OK) then
+        error stop 'basetree_Add: element already in the tree'
+      endif
+    end subroutine basetree_Add
+
+
+
+    module subroutine basetree_Add2(this, dat, newnode, ierr)
       class(basetree_t), intent(inout) :: this
       integer(DAT_KIND), intent(in) :: dat(:)
       class(basenode_t), pointer, optional :: newnode
+      integer, intent(out), optional :: ierr
 !
 ! Insert a new node to the tree.
 ! If pointer "newnode" is present, the existing node is used,
@@ -44,6 +65,7 @@
 ! The "current" pointer is unchanged.
 !        
       class(basenode_t), pointer :: new0
+      integer :: ierr0
 
       if (.not. associated(this % cfun)) &
           error stop 'basetree_Insert: cfun procedure pointer not associated'
@@ -68,19 +90,31 @@
         this % root => new0
         if (this % nodes /= 0) &
         &   error stop 'basetree_Insert: nodes /= 0 for the first node'
+        ierr0 = ERR_CONT_OK
       else
-        call insert_recurse(this, this % root, new0, this % cfun)
+        call insert_recurse(this, this % root, new0, this % cfun, ierr0)
       endif
 
-      this % nodes = this % nodes + 1
-    end subroutine basetree_Insert
+      if (ierr0 == ERR_CONT_OK) then
+        this % nodes = this % nodes + 1
+      else
+        if (present(newnode)) newnode => null()
+        deallocate(new0)
+      endif
+      if (present(ierr)) then
+        ierr = ierr0
+      elseif (ierr0 /= ERR_CONT_OK) then
+        error stop 'basetree_Add2: element already in the tree'
+      endif
+    end subroutine basetree_Add2
 
 
 
-    recursive subroutine insert_recurse(a, root, new, cfun)
+    recursive subroutine insert_recurse(a, root, new, cfun, ierr0)
       class(basetree_t), intent(inout) :: a
       class(basenode_t), intent(inout), pointer :: root, new
       procedure(compare_fun) :: cfun
+      integer, intent(out) :: ierr0
 
       integer :: ires
 
@@ -93,24 +127,27 @@
       case(+1) ! "new % key" < "root % key"
         ! Insert node to the left-subtree
         if (associated(root % left)) then
-          call insert_recurse(a, root % left, new, cfun)
+          call insert_recurse(a, root % left, new, cfun, ierr0)
         else
           root % left => new
           new % parent => root
+          ierr0 = ERR_CONT_OK
         endif
 
       case(-1) ! "new % key" > "root % key"
         ! Insert node to the right-subtree
         if (associated(root % right)) then
-          call insert_recurse(a, root % right, new, cfun)
+          call insert_recurse(a, root % right, new, cfun, ierr0)
         else
           root % right => new
           new % parent => root
+          ierr0 = ERR_CONT_OK
         endif
 
       case(0)
         ! Duplicit nodes not allowed at the moment
-        error stop "insert_recurse: duplicit not ready yet"
+print *, "insert_recurse: duplicit not ready yet"
+        ierr0 = ERR_CONT_IS
 
       case default
         error stop "insert_recurse: invalid output from cfun"
@@ -119,22 +156,39 @@
 
 
 
-    module function basetree_Exists(this, dat) result(exists)
+    module function basetree_Isin(this, dat) result(exists)
       logical :: exists
-      class(basetree_t), intent(inout) :: this
+      class(basetree_t), intent(in) :: this
       integer(DAT_KIND), intent(in) :: dat(:)
 !
-! Return TRUE and set current pointer on the node if the node
-! with the value "dat" is present in the tree.
-! Otherwise return FALSE and current pointer is not touched.
+! Return TRUE if the node with the value "dat" is present in the tree.
+! Otherwise return FALSE.
 !
-      class(basenode_t), pointer :: n
-      integer :: ires
+      class(basenode_t), pointer :: foundnode 
 
       if (.not. associated(this % cfun)) &
           error stop 'basetree_Exists: cfun procedure pointer not associated'
 
-      exists = .false.
+      foundnode => search_node(this, dat)
+      if (associated(foundnode)) then
+        exists = .true.
+        !!this % current => foundnode
+      else
+        exists = .false.
+      endif
+    end function basetree_Isin
+
+
+
+    module function search_node(this, dat) result(foundnode)
+      class(basenode_t), pointer :: foundnode
+      class(basetree_t), intent(in) :: this
+      integer(DAT_KIND), intent(in) :: dat(:)
+
+      class(basenode_t), pointer :: n
+      integer :: ires
+
+      foundnode => null()
       n => this % root
       do
         if (.not. associated(n)) exit
@@ -145,14 +199,13 @@
         case(1)  ! "dat % key" < "n % key"
           n => n % left
         case(0)  ! node found
-          exists = .true.
-          this % current => n
+          foundnode => n
           exit
         case default
           error stop "Exists: invalid resutl from cfun"
         end select 
       enddo
-    end function basetree_Exists
+    end function search_node
 
 
 
