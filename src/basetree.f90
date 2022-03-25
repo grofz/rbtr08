@@ -70,7 +70,7 @@
         if (this % nodes /= 0) &
         &   error stop 'basetree_Insert: nodes /= 0 for the first node'
       else
-        call insert_recurse(this, this % root, new0, cfun)
+        call insert_recurse(this, this % root, new0, this % cfun)
       endif
 
       this % nodes = this % nodes + 1
@@ -140,7 +140,7 @@
       n => this % root
       do
         if (.not. associated(n)) exit
-        ires = cfun(dat, n % dat)
+        ires = this % cfun(dat, n % dat)
         select case (ires)
         case(-1) ! "dat % key" > "n % key" 
           n => n % right
@@ -639,7 +639,7 @@
       class(basenode_t), pointer :: minnode, maxnode
       if (.not. associated(this % cfun)) &
           error stop 'Isvalid_BST: cfun procedure pointer not associated'
-      call Verify_BST(this % root, cfun, isvalid, minnode, maxnode)
+      call Verify_BST(this % root, this % cfun, isvalid, minnode, maxnode)
     end function basetree_Isvalid_BST
 
 

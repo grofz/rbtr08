@@ -15,6 +15,9 @@
 
     print '(a)', 'Hello example #2'
 
+    ! Compulsory association of user-function
+    tree % cfun => userfun
+
     ! Allocate and insert three nodes (INSERT)
     allocate(adat % ptr)
     adat % ptr % a = 123.45

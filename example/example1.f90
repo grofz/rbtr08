@@ -12,6 +12,9 @@
 
     print '(a)', 'Hello example #1 of using red-black tree container rbtr_t'
 
+    ! Tree initialization is compulsory
+    tree = rbtr_t(userfun)
+
     ! Allocate and insert three nodes (INSERT)
     allocate(adat % ptr)
     adat % ptr % a = 123.45

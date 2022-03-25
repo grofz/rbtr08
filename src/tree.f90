@@ -59,7 +59,7 @@
       class(basenode_t), pointer :: root => null()
       class(basenode_t), pointer :: current => null()
       integer :: nodes = 0
-      procedure(compare_fun), pointer, nopass :: cfun => null()
+      procedure(compare_fun), pointer, nopass, public :: cfun => null()
     contains
       procedure :: Insert => basetree_Insert
       procedure :: Exists => basetree_Exists
