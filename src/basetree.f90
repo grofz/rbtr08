@@ -20,11 +20,13 @@
 
 
 
-    module function basetree_Initialize() result(new)
+    module function basetree_Initialize(cfun) result(new)
       type(basetree_t) :: new
+      procedure(compare_fun) :: cfun
 !
 ! A dummy constructor doing nothing at the moment
 !
+      new % cfun => cfun
     end function basetree_Initialize
 
 
@@ -32,7 +34,7 @@
     module subroutine basetree_Insert(this, dat, cfun, newnode)
       class(basetree_t), intent(inout) :: this
       integer(DAT_KIND), intent(in) :: dat(:)
-      procedure(cfun_abstract) :: cfun
+      procedure(compare_fun) :: cfun
       class(basenode_t), pointer, optional :: newnode
 !
 ! Insert a new node to the tree.
@@ -43,6 +45,9 @@
 ! The "current" pointer is unchanged.
 !        
       class(basenode_t), pointer :: new0
+
+      if (.not. associated(this % cfun)) &
+          error stop 'basetree_Insert: cfun procedure pointer not associated'
 
       ! Prepare new node to be selected to the tree
       ! Node type other than "basenode_t" must be allocated up-stream
@@ -76,7 +81,7 @@
     recursive subroutine insert_recurse(a, root, new, cfun)
       class(basetree_t), intent(inout) :: a
       class(basenode_t), intent(inout), pointer :: root, new
-      procedure(cfun_abstract) :: cfun
+      procedure(compare_fun) :: cfun
 
       integer :: ires
 
@@ -119,7 +124,7 @@
       logical :: exists
       class(basetree_t), intent(inout) :: this
       integer(DAT_KIND), intent(in) :: dat(:)
-      procedure(cfun_abstract) :: cfun
+      procedure(compare_fun) :: cfun
 !
 ! Return TRUE and set current pointer on the node if the node
 ! with the value "dat" is present in the tree.
@@ -127,6 +132,9 @@
 !
       class(basenode_t), pointer :: n
       integer :: ires
+
+      if (.not. associated(this % cfun)) &
+          error stop 'basetree_Exists: cfun procedure pointer not associated'
 
       exists = .false.
       n => this % root
@@ -624,11 +632,13 @@
     module function basetree_Isvalid_BST(this, cfun) result(isvalid)
       logical :: isvalid
       class(basetree_t), intent(in) :: this
-      procedure(cfun_abstract) :: cfun
+      procedure(compare_fun) :: cfun
 !
 ! Verify that the tree is a valid BST tree
 !
       class(basenode_t), pointer :: minnode, maxnode
+      if (.not. associated(this % cfun)) &
+          error stop 'Isvalid_BST: cfun procedure pointer not associated'
       call Verify_BST(this % root, cfun, isvalid, minnode, maxnode)
     end function basetree_Isvalid_BST
 
@@ -636,7 +646,7 @@
 
     recursive subroutine Verify_BST(tree, cfun, isvalid, minnode, maxnode)
       class(basenode_t), pointer, intent(in) :: tree
-      procedure(cfun_abstract) :: cfun
+      procedure(compare_fun) :: cfun
       logical, intent(out) :: isvalid
       class(basenode_t), pointer, intent(out) :: minnode, maxnode
 !

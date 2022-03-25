@@ -18,13 +18,18 @@
 
   subroutine test2
     use tree_tests_m
-    use tree_m
+    use tree_m 
     implicit none
 
     type(rbtr_t)     :: aobj, cobj
     type(basetree_t) :: bobj
     integer :: i
-    procedure(cfun_abstract) compare_nodes_fun
+    procedure(compare_fun) compare_nodes_fun
+
+    ! Initialization of "basetree_t" objects is compulsory!
+    aobj = rbtr_t(compare_nodes_fun)
+    cobj = rbtr_t(compare_nodes_fun)
+    bobj = basetree_t(compare_nodes_fun)
 
 
     print *, 'RUNING TEST #2 '
@@ -55,7 +60,7 @@
 
   subroutine test3(nsize, is_validated)
     use tree_tests_m
-    use tree_m, only : rbtr_t, cfun_abstract
+    use tree_m, only : rbtr_t, compare_fun
 
     integer, intent(in) :: nsize
     logical, intent(in) :: is_validated
@@ -64,9 +69,12 @@
     integer :: i, ipart, hr(2)
     real :: log_of_size
     logical found, is_pass
-    procedure(cfun_abstract) :: compare_nodes_fun
+    procedure(compare_fun) :: compare_nodes_fun
 
     print '(a)', 'RUNNING TEST #3'
+
+    ! Initialization is compulsory
+    tree = rbtr_t(compare_nodes_fun)
 
     ! Fill by N items
     y0 = Get_array(nsize)

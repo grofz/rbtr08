@@ -1,5 +1,5 @@
   module tree_tests_m
-    use tree_m, only : DAT_KIND, cfun_abstract, basetree_t, rbtr_t
+    use tree_m, only : DAT_KIND, compare_fun, basetree_t, rbtr_t
     implicit none
     private
     public Insert_nodes, Print_nodes, Print_nodes2, Delete_nodes
@@ -10,7 +10,7 @@
     subroutine Insert_nodes(tree, arr_data, cfun, isvalidated)
       class(basetree_t), intent(inout) :: tree
       integer(DAT_KIND), intent(in) :: arr_data(:)
-      procedure(cfun_abstract) :: cfun
+      procedure(compare_fun) :: cfun
       logical, optional, intent(in) :: isvalidated
 !
 ! Insert all array elements to the tree.
@@ -125,7 +125,7 @@
     subroutine Delete_nodes(tree, arr_data, cfun, isvalidated)
       class(basetree_t), intent(inout) :: tree
       integer(DAT_KIND), intent(in) :: arr_data(:)
-      procedure(cfun_abstract) :: cfun
+      procedure(compare_fun) :: cfun
       logical, intent(in), optional :: isvalidated
 !
 ! Delete all array elements from the tree

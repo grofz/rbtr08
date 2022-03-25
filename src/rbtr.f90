@@ -25,8 +25,10 @@
 
 
 
-    module function rbtr_Initialize() result(new)
+    module function rbtr_Initialize(cfun) result(new)
       type(rbtr_t) :: new
+      procedure(compare_fun) :: cfun
+      new % cfun => cfun
 !     allocate(rbnode_t :: new % typet)
     end function rbtr_Initialize
 
@@ -35,7 +37,7 @@
     module subroutine rbtr_Insert(this, dat, cfun, newnode)
       class(rbtr_t), intent(inout)  :: this
       integer(DAT_KIND), intent(in) :: dat(:)
-      procedure(cfun_abstract)      :: cfun
+      procedure(compare_fun)      :: cfun
       class(basenode_t), pointer, optional :: newnode
 !
 ! Insert a node to a red-black tree.
@@ -45,6 +47,9 @@
 ! Then repair the tree.
 !
       class(basenode_t), pointer :: new0
+
+      if (.not. associated(this % cfun)) &
+          error stop 'rbtr_Insert: cfun procedure pointer not associated'
 
       if (present(newnode)) then
         ! already allocated node can be used if necessary

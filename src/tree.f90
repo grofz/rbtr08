@@ -7,13 +7,15 @@
 !
   module tree_m
     use kinds_m, only : I4B, I1B
+    use abstract_container
     implicit none
     private
-    public cfun_abstract, basetree_t, basenode_t, rbtr_t, rbnode_t
+    public compare_fun, basetree_t, basenode_t, rbtr_t, rbnode_t
     public tree_mold
 
     ! Kind of integer array containing the data
-    integer, parameter, public :: DAT_KIND = I4B
+    !!integer, parameter, public :: DAT_KIND = I4B
+    public DAT_KIND
 
     ! Variable used as "mold" in transfer function
     integer(DAT_KIND), allocatable :: tree_mold(:)
@@ -25,12 +27,12 @@
     &                             TREE_ERR_NONEXT = 1
 
     ! Function to compare two tree nodes
-    abstract interface
-      integer function cfun_abstract(a, b)
-        import DAT_KIND
-        integer(DAT_KIND), intent(in) :: a(:), b(:)
-      end function
-    end interface
+    !abstract interface
+    !  integer function cfun_abstract(a, b)
+    !    import DAT_KIND
+    !    integer(DAT_KIND), intent(in) :: a(:), b(:)
+    !  end function
+    !end interface
 
 
 
@@ -57,6 +59,7 @@
       class(basenode_t), pointer :: root => null()
       class(basenode_t), pointer :: current => null()
       integer :: nodes = 0
+      procedure(compare_fun), pointer, nopass :: cfun => null()
     contains
       procedure :: Insert => basetree_Insert
       procedure :: Exists => basetree_Exists
@@ -74,8 +77,9 @@
     end type basetree_t
 
     interface basetree_t
-      module function basetree_Initialize() result(new)
+      module function basetree_Initialize(cfun) result(new)
         type(basetree_t) :: new
+        procedure(compare_fun) :: cfun
       end function basetree_Initialize
     end interface basetree_t
 
@@ -90,7 +94,7 @@
       module subroutine basetree_Insert(this, dat, cfun, newnode)
         class(basetree_t), intent(inout) :: this
         integer(DAT_KIND), intent(in) :: dat(:)
-        procedure(cfun_abstract) :: cfun
+        procedure(compare_fun) :: cfun
         class(basenode_t), pointer, optional :: newnode
       end subroutine basetree_Insert
 
@@ -98,7 +102,7 @@
         logical :: exists
         class(basetree_t), intent(inout) :: this
         integer(DAT_KIND), intent(in) :: dat(:)
-        procedure(cfun_abstract) :: cfun
+        procedure(compare_fun) :: cfun
       end function basetree_Exists
 
       module function basetree_Read(this, ierr) result(dat)
@@ -136,7 +140,7 @@
       module function basetree_Isvalid_BST(this, cfun) result(isvalid)
         logical :: isvalid
         class(basetree_t), intent(in) :: this
-        procedure(cfun_abstract) :: cfun
+        procedure(compare_fun) :: cfun
       end function basetree_Isvalid_BST
 
       module function basetree_Height_range(this) result(ht)
@@ -234,8 +238,9 @@
     end type rbtr_t
 
     interface rbtr_t
-      module function rbtr_Initialize() result(new)
+      module function rbtr_Initialize(cfun) result(new)
         type(rbtr_t) :: new
+        procedure(compare_fun) :: cfun
       end function rbtr_Initialize
     end interface rbtr_t
 
@@ -250,7 +255,7 @@
       module subroutine rbtr_Insert(this, dat, cfun, newnode)
         class(rbtr_t), intent(inout) :: this
         integer(DAT_KIND), intent(in) :: dat(:)
-        procedure(cfun_abstract) :: cfun
+        procedure(compare_fun) :: cfun
         class(basenode_t), pointer, optional :: newnode
       end subroutine rbtr_Insert
 
