@@ -12,7 +12,7 @@
     print *
 
     !call test2()
-    !call test1()
+    call test1()
 
     is_validated = .false.
     if (n < 1001) is_validated = .true.
@@ -38,7 +38,10 @@
     !a_rb = rbtr_t(compare_nodes_fun)
     a_rb = basetree_t(compare_nodes_fun)
     call Insert_nodes(a_rb, [10, 7, 5, 2, 6, 3] )
-    !call Insert_nodes(a_rb, [10, 7, 5, 2, 6, 3] )
+    call Insert_nodes(a_rb, [11, 17, 15, 12, 16, 13, 34, 56] )
+    call Insert_nodes(a_rb, [31, 47, 65, 92, 26, 73, 84, 96] )
+    call Insert_nodes(a_rb, [33, 44, 55, 66, 77, 88, 27, 41] )
+    call a_rb % print()
 
     b_rb = a_rb
 

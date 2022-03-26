@@ -948,39 +948,41 @@ print *, "insert_recurse: duplicit not ready yet"
 
     subroutine basetree_Display(this)
       class(basetree_t), intent(in) :: this
-
-      integer :: ch, gap, line, n, level, maxlevel
-      integer :: i
-      class(basenode_t), pointer :: root
-      type ptr_t
+!
+! A graphical expression of the tree (for small trees only)
+!
+      type basenode_ptr
         class(basenode_t), pointer :: p
-      end type ptr_t
-      type(ptr_t), allocatable :: queue(:)
-      type(ptr_t) :: item, lc, rc
+      end type
+      integer, parameter :: &
+          CH = 2,       & ! node width...
+          AD = 1,       & ! ... plus one character for / and \ 
+          MAXLEVEL = 5, & ! (2**5)=32 nodes at fifth level
+          LINE = 96       ! needs 32*(2+1) = 96 cbaracters
+      integer :: gap, n, level, i, height(2)
+      type(basenode_ptr), allocatable :: queue(:)
+      type(basenode_ptr) :: item, lc, rc
 
-
-      ch = 2    ! item width (TODO)
-      line = 100 ! line length
-      maxlevel = 5
-      level = -1
+      write(*,'(a,i0,a)') 'tree with ', this % count(),' elements >'
+      call print_node(null(), (LINE-4)/2-1, 0)
+      write(*,'(a)') 'root' 
 
       allocate(queue(0))
       item % p => this % root
       queue = enqueue(queue, item)
-
-      print '(a)', '12345678901234567890123456789012345678901234567890123456789012345678901234567890'
+      level = -1
       do
         level = level + 1
         n = 2**(level)
-        gap = max((line-n*ch)/(n), 0)
-        do i=1,n
+        gap = max((LINE-n*(ch+ad))/(n), 0)
+        do i = 1, n
           queue = dequeue(queue, item)
           if (i==1) then
-            call print_node(null(), gap/2)
+            call print_node(null(), gap/2, 0)
           else
-            call print_node(null(), gap)
+            call print_node(null(), gap, 0)
           endif
-          call print_node(item % p, ch)
+          call print_node(item % p, ch, ad)
 
           if (associated(item % p)) then
             lc % p => item % p % Leftchild()
@@ -992,17 +994,21 @@ print *, "insert_recurse: duplicit not ready yet"
           queue = enqueue(queue, lc)
           queue = enqueue(queue, rc)
         enddo
-        write(*,*)
+        write(*,*) ! end of line
         if (level >= maxlevel) exit
       enddo
-      print '(a)', '1234567890         01234567890         01234567890         012345678901234567890'
+
+      height = this % height_range()
+      if (height(2) > MAXLEVEL) write(*, '(a,i0,a,i0,a)') &
+         '(only ',MAXLEVEL,' of ',height(2),' levels displayed)'
+      write(*,*)
 
     contains
 
       function enqueue(pin, new) result(pout)
-        type(ptr_t), intent(in) :: pin(:)
-        type(ptr_t), intent(in) :: new
-        type(ptr_t), allocatable :: pout(:)
+        type(basenode_ptr), intent(in) :: pin(:)
+        type(basenode_ptr), intent(in) :: new
+        type(basenode_ptr), allocatable :: pout(:)
         integer :: n
         n = size(pin)
         allocate(pout(n+1))
@@ -1011,9 +1017,9 @@ print *, "insert_recurse: duplicit not ready yet"
       end function enqueue
 
       function dequeue(pin, removed) result(pout)
-        type(ptr_t), intent(in) :: pin(:)
-        type(ptr_t), intent(out) :: removed
-        type(ptr_t), allocatable :: pout(:)
+        type(basenode_ptr), intent(in) :: pin(:)
+        type(basenode_ptr), intent(out) :: removed
+        type(basenode_ptr), allocatable :: pout(:)
         integer :: n
         n = size(pin)
         if (n==0) error stop 'dequeue empty'
@@ -1025,30 +1031,50 @@ print *, "insert_recurse: duplicit not ready yet"
 
 
 
-    subroutine print_node(node, ch)
+    subroutine print_node(node, ch, ad)
       class(basenode_t), intent(in), pointer :: node
-      integer, intent(in) :: ch
+      integer, intent(in) :: ch, ad
 !
-! print node on screen, width is "ch" characters
-! node can be empty pointer
+! Print node on screen, width is "ch" characters.
+! Node can be empty pointer - then print ch+ad spaces.
 !
+      character(len=*), parameter :: &
+      &   BLUE=achar(27)//'[94m', RED=achar(27)//'[95m', &
+      &   RESET=achar(27)//'[0m'
       integer, parameter :: MAXBUF = 200
       character(len=MAXBUF) :: prepare
-      character(len=:), allocatable :: buffer
+      character(len=:), allocatable :: form, nodechar
       integer :: i
 
-        ! temporary - works for integers
+      ! Prepare the format field (works for integers only)
       write(prepare,*) ch
-      buffer = '(i'//trim(adjustl(prepare))//')'
+      nodechar = trim(adjustl(prepare))
+      form = '(i'//nodechar//'.'//nodechar//')'
+      nodechar = ''
       do i=1,MAXBUF
         prepare(i:i) = ' '
       enddo
 
       if (associated(node)) then
-        ! temporary - must take actual value
-        write(prepare,fmt=buffer) node % dat(1)
+        ! write node value
+        write(prepare,fmt=form) node % dat(1)
+        select type(node)
+        class is (rbnode_t)
+          if (node % color == RED_NODE) then
+            nodechar = red//trim(adjustl(prepare))//reset
+          else
+            nodechar = blue//trim(adjustl(prepare))//reset
+          endif
+        class default
+          nodechar = trim(adjustl(prepare))
+        end select
+        if (Is_left_child(node)) nodechar = nodechar//'/'
+        if (Is_right_child(node)) nodechar = '\'//nodechar
+        write(*,'(a)',advance='no') nodechar
+      else
+        ! write "ch" + "ad" spaces
+        write(*,'(a)',advance='no') prepare(1:ch+ad)
       endif
-      write(*,'(a)',advance='no') prepare(1:ch)
     end subroutine print_node
 
 
