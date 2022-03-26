@@ -57,7 +57,6 @@
     type :: basetree_t
       private
       class(basenode_t), pointer :: root => null()
-      class(basenode_t), pointer :: current => null()
       integer :: nodes = 0
       procedure(compare_fun), pointer, nopass, public :: cfun => null()
     contains
@@ -65,9 +64,10 @@
       procedure :: Add => basetree_Add
       procedure :: Add2 => basetree_Add2
       procedure :: Isin => basetree_Isin
+      procedure :: Isempty => basetree_Isempty
       procedure :: Read => basetree_Read
-      procedure :: ReadNext => basetree_ReadNext
-      procedure :: Resetnode => basetree_Resetnode
+      procedure :: NextRead => basetree_NextRead
+      procedure :: Resetcurrent => basetree_Resetcurrent
       procedure :: Firstnode => basetree_Firstnode
       procedure :: Nextnode => basetree_Nextnode
       procedure :: Printcurrentnode => basetree_Printcurrentnode
@@ -88,8 +88,9 @@
 
 
     interface
-      module function basetree_Printcurrentnode(this) result(str)
+      module function basetree_Printcurrentnode(this, handle) result(str)
         class(basetree_t), intent(in) :: this
+        integer(DAT_KIND), intent(in) :: handle(:)
         character(len=:), allocatable :: str
       end function basetree_Printcurrentnode
 
@@ -112,41 +113,50 @@
         integer(DAT_KIND), intent(in) :: dat(:)
       end function basetree_Isin
 
+      module function basetree_Isempty(this) result(isempty)
+        logical :: isempty
+        class(basetree_t), intent(in) :: this
+      end function basetree_IsEmpty
+
       module function search_node(this, dat) result(foundnode)
         class(basenode_t), pointer :: foundnode
         class(basetree_t), intent(in) :: this
         integer(DAT_KIND), intent(in) :: dat(:)
       end function
 
-      module function basetree_Read(this, ierr) result(dat)
-        class(basetree_t), intent(in) :: this
-        integer, optional, intent(out) :: ierr
+      module function basetree_Read(this, handle, ierr) result(dat)
         integer(DAT_KIND), allocatable :: dat(:)
+        class(basetree_t), intent(in) :: this
+        integer(DAT_KIND), intent(in) :: handle(:)
+        integer, optional, intent(out) :: ierr
       end function basetree_Read
 
-      module function basetree_ReadNext(this, ierr) result(dat)
-        class(basetree_t), intent(inout) :: this
-        integer, optional, intent(out) :: ierr
+      module function basetree_NextRead(this, handle, ierr) result(dat)
         integer(DAT_KIND), allocatable :: dat(:)
-      end function basetree_ReadNext
+        class(basetree_t), intent(in) :: this
+        integer(DAT_KIND), intent(inout) :: handle(:)
+        integer, optional, intent(out) :: ierr
+      end function basetree_NextRead
 
       pure module function basetree_Nodes(this)
         integer :: basetree_Nodes
         class(basetree_t), intent(in) :: this
       end function basetree_Nodes
 
-      module subroutine basetree_Firstnode(this, ierr)
-        class(basetree_t), intent(inout) :: this
+      module subroutine basetree_Firstnode(this, handle, ierr)
+        class(basetree_t), intent(in) :: this
+        integer(DAT_KIND), allocatable, intent(out) :: handle(:)
         integer, intent(out), optional :: ierr
       end subroutine basetree_Firstnode
 
-      module subroutine basetree_Resetnode(this, ierr)
-        class(basetree_t), intent(inout) :: this
-        integer, intent(out), optional :: ierr
-      end subroutine basetree_Resetnode
+      module subroutine basetree_Resetcurrent(this, handle)
+        class(basetree_t), intent(in) :: this
+        integer(DAT_KIND), allocatable, intent(out) :: handle(:)
+      end subroutine basetree_Resetcurrent
 
-      module subroutine basetree_Nextnode(this, ierr)
-        class(basetree_t), intent(inout) :: this
+      module subroutine basetree_Nextnode(this, handle, ierr)
+        class(basetree_t), intent(in) :: this
+        integer(DAT_KIND), intent(inout) :: handle(:)
         integer, intent(out), optional :: ierr
       end subroutine basetree_Nextnode
 
@@ -260,9 +270,10 @@
 
 
     interface
-      module function rbtr_Printcurrentnode(this) result(str)
-        character(len=:), allocatable :: str
+      module function rbtr_Printcurrentnode(this, handle) result(str)
         class(rbtr_t), intent(in) :: this
+        character(len=:), allocatable :: str
+        integer(DAT_KIND), intent(in) :: handle(:)
       end function rbtr_Printcurrentnode
 
       module subroutine rbtr_Add(this, dat, ierr)

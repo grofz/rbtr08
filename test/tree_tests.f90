@@ -72,8 +72,9 @@
 
       integer :: ierr, i
       integer, parameter :: IONELINE = 10
+      integer(DAT_KIND), allocatable :: handle(:)
 
-      call tree % Firstnode(ierr=ierr)
+      call tree % Firstnode(handle, ierr=ierr)
       if (ierr /= 0) then
         print '(a)', 'Print_nodes: tree is empty'
         return
@@ -82,10 +83,10 @@
       write(*,'(a)') 'Print_nodes:'
       do
         if (ierr /= 0) exit
-        write(*,'(a)',advance='no') tree % Printcurrentnode()//' '
+        write(*,'(a)',advance='no') tree % Printcurrentnode(handle)//' '
         i = i + 1
         if (mod(i,IONELINE)==0) write(*,*)
-        call tree % Nextnode(ierr=ierr)
+        call tree % Nextnode(handle, ierr=ierr)
       enddo
       write(*,*)
     end subroutine Print_nodes
@@ -98,16 +99,18 @@
       integer :: ierr, i
       integer, allocatable :: dat(:)
       integer, parameter :: IONELINE = 20
+      integer(DAT_KIND), allocatable :: handle(:)
 
-      call tree % Resetnode(ierr=ierr)
-      if (ierr /= 0) then
+      if (tree % Isempty()) then
         print '(a)', 'Print_nodes2: tree is empty'
         return
       endif
+
+      call tree % Resetcurrent(handle)
       i = 0
       write(*,'(a)') 'Print_nodes2:'
       do
-        dat = tree % Readnext(ierr)
+        dat = tree % NextRead(handle, ierr)
         if (ierr /= 0) exit
         if (size(dat) /= 1) then
           print *, 'TODO - formatting might fail now...'

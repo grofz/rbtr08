@@ -1,19 +1,26 @@
   submodule(tree_m) basetree
     implicit none
 
+    type basenode_ptr
+      class(basenode_t), pointer :: p
+    end type basenode_ptr
+
   contains
 
-    module function basetree_Printcurrentnode(this) result(str)
+    module function basetree_Printcurrentnode(this, handle) result(str)
 !
 ! Display content of the "current" node
 !
       class(basetree_t), intent(in) :: this
+      integer(DAT_KIND), intent(in) :: handle(:)
       character(len=:), allocatable :: str
       character(len=1000) :: dat
-      if (.not. associated(this % current)) then
+      type(basenode_ptr) :: cp
+      cp = transfer(handle, cp)
+      if (.not. associated(cp % p)) then
         str='current not allocated...'
       else
-        write(dat,*) this % current % dat
+        write(dat,*) cp % p % dat
         str='['//trim(adjustl(dat))//']'
       endif
     end function basetree_Printcurrentnode
@@ -209,79 +216,100 @@ print *, "insert_recurse: duplicit not ready yet"
 
 
 
-    module function basetree_Read(this, ierr) result(dat)
+    module function basetree_Isempty(this) result(isempty)
+      logical :: isempty
       class(basetree_t), intent(in) :: this
+
+      if (.not. associated(this % root) .and. this % nodes == 0) then
+        isempty = .true.
+      elseif (associated(this % root) .and. this % nodes > 0) then
+        isempty = .false.
+      else
+        error stop 'basetree_Isempty inconsistency found'
+      endif
+    end function basetree_Isempty
+
+
+
+    module function basetree_Read(this, handle, ierr) result(dat)
+      class(basetree_t), intent(in) :: this
+      integer(DAT_KIND), intent(in) :: handle(:)
       integer, optional, intent(out) :: ierr
       integer(DAT_KIND), allocatable :: dat(:)
 !
-! Return data of the node that is pointed by "current" pointer.
+! Return data of the node that is pointed by "handle".
 ! If current points nowhere, function fails or flags an error.
 !
       integer :: ierr0
+      type(basenode_ptr) :: cp
+
+      cp = transfer(handle, cp)
 
       if (.not. associated(this % root)) then
-        ierr0 = TREE_ERR_EMPTY
-      elseif (.not. associated(this % current)) then
-        ierr0 = TREE_ERR_NOCURRENT
+        !ierr0 = TREE_ERR_EMPTY
+        ierr0 = ERR_CONT_END
+      elseif (.not. associated(cp % p)) then
+        !ierr0 = TREE_ERR_NOCURRENT
+        ierr0 = ERR_CONT_END
       else
-        ierr0 = TREE_ERR_OK
-        dat = this % current % dat
+        !ierr0 = TREE_ERR_OK
+        ierr0 = ERR_CONT_OK
+        dat = cp % p % dat
       endif
 
       if (present(ierr)) then
         ierr = ierr0
-      elseif (ierr0 /= TREE_ERR_OK) then
-        error stop "basetree_Read: current pointer is null"
+      elseif (ierr0 /= ERR_CONT_OK) then
+        error stop "basetree_Read: current handle is null"
       endif
     end function basetree_Read
 
 
 
-    module function basetree_ReadNext(this, ierr) result(dat)
-      class(basetree_t), intent(inout) :: this
+    module function basetree_NextRead(this, handle, ierr) result(dat)
+      class(basetree_t), intent(in) :: this
+      integer(DAt_KIND), intent(inout) :: handle(:)
       integer, optional, intent(out) :: ierr
       integer(DAT_KIND), allocatable :: dat(:)
 !
-! Move "current" node pointer to a next node and return its data.
-! If "current" is not set, data of a first node are returned.
-! If "current" points to the last node, function fails or flags an error.
-! If tree is empty, function fails or flags an error.
+! Move "handle" to a next node and return its data.
+! If "handle" is not set, data of a first node are returned.
+! If "handle" points to the last node, function fails or flags an error.
 !
       integer :: ierr0
-      character(len=:), allocatable :: message
       integer(DAT_KIND), parameter :: empty_data(2) = [-99, -99]
+      type(basenode_ptr) :: cp
 
-      ierr0 = TREE_ERR_OK
+      cp = transfer(handle, cp)
+
+      !ierr0 = TREE_ERR_OK
+      ierr0 = ERR_CONT_OK
       if (.not. associated(this % root)) then
-        ierr0 = TREE_ERR_EMPTY
+        ierr0 = ERR_CONT_END
+        !ierr0 = TREE_ERR_EMPTY
         dat = empty_data
-      elseif (.not. associated(this % current)) then
-        this % current => Leftmost(this % root)
-        dat = this % current % dat
+      elseif (.not. associated(cp % p)) then
+        cp % p => Leftmost(this % root)
+        dat = cp % p % dat
       else
-        this % current => Successor(this % current)
-        if (associated(this % current)) then
-          dat = this % current % dat
+        cp % p => Successor(cp % p)
+        if (associated(cp % p)) then
+          dat = cp % p % dat
         else
-          ierr0 = TREE_ERR_NOCURRENT
+          !ierr0 = TREE_ERR_NOCURRENT
+          ierr0 = ERR_CONT_END
           dat = empty_data
         endif
       endif
 
+      handle = transfer(cp, handle)
+
       if (present(ierr)) then
         ierr = ierr0
-      elseif (ierr0 /= TREE_ERR_OK) then
-        select case (ierr0)
-        case (TREE_ERR_EMPTY)
-          message = "reading from empty tree"
-        case (TREE_ERR_NOCURRENT)
-          message = "reading from behind the last node"
-        case default
-          message = "Just to make compiler happy"
-        end select
-        error stop "basetree_Readnext: "//message
+      elseif (ierr0 /= ERR_CONT_OK) then
+        error stop "basetree_Readnext: End of tree"
       endif
-    end function basetree_ReadNext
+    end function basetree_NextRead
 
 
 
@@ -554,65 +582,68 @@ print *, "insert_recurse: duplicit not ready yet"
 
 
 
-    module subroutine basetree_Firstnode(this, ierr)
-      class(basetree_t), intent(inout) :: this
+    module subroutine basetree_Firstnode(this, handle, ierr)
+      class(basetree_t), intent(in) :: this
+      integer(DAT_KIND), allocatable, intent(out) :: handle(:)
       integer, intent(out), optional :: ierr
 !
-! Set "current" pointer to the first node in the tree.
-! If tree is empty, "current" end as null pointer.
+! Set "handle" to the first node in the tree.
+! If tree is empty, "handle" is a null pointer.
 !
       integer :: ierr0
+      type(basenode_ptr) :: cp
 
       if (associated(this % root)) then
-        this % current => Leftmost(this % root)
-        ierr0 = TREE_ERR_OK
+        cp % p => Leftmost(this % root)
+        ierr0 = ERR_CONT_OK
       else
-        this % current => null()
-        ierr0 = TREE_ERR_EMPTY
+        cp % p => null()
+        ierr0 = ERR_CONT_END
       endif
+      handle = transfer(cp, handle)
       if (present(ierr)) ierr = ierr0
     end subroutine basetree_Firstnode
 
 
 
-    module subroutine basetree_Resetnode(this, ierr)
-      class(basetree_t), intent(inout) :: this
+    module subroutine basetree_Resetcurrent(this, handle)
+      class(basetree_t), intent(in) :: this
+      integer(DAT_KIND), intent(out), allocatable :: handle(:)
+!
+! Return "handle" pointing in front of the first element in the tree
+!
+      type(basenode_ptr) :: cp
+      cp % p => null()
+      handle = transfer(cp, handle)
+    end subroutine basetree_Resetcurrent
+
+
+
+    module subroutine basetree_Nextnode(this, handle, ierr)
+      class(basetree_t), intent(in) :: this
+      integer(DAT_KIND), intent(inout) :: handle(:)
       integer, intent(out), optional :: ierr
 !
-! Unset the "current" pointer.
-! If tree is empty, flag TREE_ERR_EMPTY
-!
-      integer :: ierr0
-
-      this % current => null()
-      ierr0 = TREE_ERR_OK
-      if (.not. associated(this % root)) ierr0 = TREE_ERR_EMPTY
-      if (present(ierr)) ierr = ierr0
-    end subroutine basetree_Resetnode
-
-
-
-    module subroutine basetree_Nextnode(this, ierr)
-      class(basetree_t), intent(inout) :: this
-      integer, intent(out), optional :: ierr
-!
-! Moves "current" pointer to the next node in the tree.
-! Ïf "current" is the last node, "current" is nullified.
+! Moves "handle" to the next node in the tree.
+! Ïf "handle" is the last node, "handle" is nullified.
 !
       integer :: ierr0
       class(basenode_t), pointer :: n
+      type(basenode_ptr) :: cp
 
-      n => this % current
+      cp = transfer(handle, cp)
+      n => cp % p
       if (.not. associated(n)) then
-        ierr0 = TREE_ERR_NOCURRENT
+        ierr0 = ERR_CONT_END
       else
         n => Successor(n)
         if (associated(n)) then
-          ierr0 = TREE_ERR_OK
+          ierr0 = ERR_CONT_OK
         else
-          ierr0 = TREE_ERR_NONEXT
+          ierr0 = ERR_CONT_END
         endif
-        this % current => n
+        cp % p => n
+        handle = transfer(cp, handle)
       endif
       if (present(ierr)) ierr = ierr0
     end subroutine basetree_Nextnode
@@ -857,7 +888,6 @@ print *, '...deleted nodes = ', counter
 
       ! reset all components (just in case the routine called directly)
       this % nodes = 0
-      this % current => null()
     end subroutine basetree_Destructor
 
 

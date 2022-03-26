@@ -2,13 +2,14 @@
 ! Example #1
 !
   program example
-    use tree_m, only : rbtr_t, tree_mold
+    use tree_m, only : rbtr_t, tree_mold, DAT_KIND
     use usermodule, only : mytype, mytype_ptr, userfun
     implicit none
 
     type(mytype_ptr) :: adat
     type(rbtr_t) :: tree
     integer :: ierr
+    integer(DAT_KIND), allocatable :: handle(:)
 
     print '(a)', 'Hello example #1 of using red-black tree container rbtr_t'
 
@@ -44,10 +45,10 @@
     ! Remove nodes
     do
       if (tree % size() == 0) exit
-      call tree % Firstnode()
-      adat = transfer(tree % Read(), adat)
+      call tree % Firstnode(handle)
+      adat = transfer(tree % Read(handle), adat)
       print *, '  node = ', adat % ptr % a, ' will be removed'
-      call tree % remove(tree % Read())
+      call tree % remove(tree % Read(handle))
       deallocate(adat % ptr)
 
       call Iterator(tree)
@@ -56,18 +57,19 @@
   contains
     subroutine Iterator(tree)
       type(rbtr_t), intent(inout) :: tree
+      integer(DAT_KIND), allocatable :: handle(:)
 
       ! Iterate all nodes
-      call tree % Resetnode(ierr)
-      if (ierr == 0) then
+      if (.not. tree % Isempty()) then
         print *
+        call tree % Resetcurrent(handle)
         do
-          adat = transfer(tree % Readnext(ierr), adat)
+          adat = transfer(tree % NextRead(handle, ierr), adat)
           if (ierr /= 0) exit
 
           ! We can use value in adat
           print *, 'Node = ', adat % ptr % a
-          print *, ' ___ = ', tree % Printcurrentnode()
+          print *, ' ___ = ', tree % Printcurrentnode(handle)
         enddo
       else
         print *

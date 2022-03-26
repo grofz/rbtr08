@@ -4,7 +4,7 @@
 ! over-ride the function Printcurrentnode
 !
   program example
-    use tree_m, only : tree_mold
+    use tree_m, only : tree_mold, DAT_KIND
     use mytree
     use usermodule, only : mytype, mytype_ptr, userfun
     implicit none
@@ -12,6 +12,7 @@
     type(mytype_ptr) :: adat
     type(mytree_t)   :: tree
     integer :: ierr
+    integer(DAT_KIND), allocatable :: handle(:)
 
     print '(a)', 'Hello example #2'
 
@@ -47,10 +48,10 @@
     ! Remove nodes
     do
       if (tree % size() == 0) exit
-      call tree % Firstnode()
-      adat = transfer(tree % Read(), adat)
+      call tree % Firstnode(handle)
+      adat = transfer(tree % Read(handle), adat)
       print *, '  node = ', adat % ptr % a, ' will be removed'
-      call tree % remove(tree % Read())
+      call tree % remove(tree % Read(handle))
       deallocate(adat % ptr)
 
       call Iterator(tree)
@@ -61,12 +62,12 @@
       class(mytree_t), intent(inout) :: tree
 
       ! Iterate all nodes
-      call tree % Firstnode(ierr)
+      call tree % Firstnode(handle, ierr)
       if (ierr == 0) then
         print *
         do
-          print *, ' ___ = ', tree % Printcurrentnode()
-          call tree % Nextnode(ierr)
+          print *, ' ___ = ', tree % Printcurrentnode(handle)
+          call tree % Nextnode(handle, ierr)
           if (ierr /= 0) exit
         enddo
       else

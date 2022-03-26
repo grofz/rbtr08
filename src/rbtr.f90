@@ -5,17 +5,25 @@
 
     implicit none
 
+    type node_ptr
+      class(basenode_t), pointer :: p
+    end type
+
   contains
 
-    module function rbtr_Printcurrentnode(this) result(str)
+    module function rbtr_Printcurrentnode(this, handle) result(str)
       character(len=:), allocatable :: str
       class(rbtr_t), intent(in) :: this
+      integer(DAT_KIND), intent(in) :: handle(:)
       character(len=1000) :: color
-      if (.not. associated(this % current)) then
+      type(node_ptr) :: cp
+
+      cp = transfer(handle, cp)
+      if (.not. associated(cp % p)) then
         str='current not associated...'
       else
-        str = this % basetree_t % Printcurrentnode()
-        select type(aa => this % current)
+        str = this % basetree_t % Printcurrentnode(handle)
+        select type(aa => cp % p)
         class is (rbnode_t)
           write(color,*) aa % color
           str = str//'{'//trim(adjustl(color))//'}'
@@ -358,7 +366,6 @@
 
 
       ! Now N can be deallocated
-      this % current => null()
       this % nodes = this % nodes - 1
 
       if (.not. lfreed) deallocate(n % dat)
