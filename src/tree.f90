@@ -14,29 +14,14 @@
     public tree_mold
 
     ! Kind of integer array containing the data
-    !!integer, parameter, public :: DAT_KIND = I4B
     public DAT_KIND
 
     ! Variable used as "mold" in transfer function
     integer(DAT_KIND), allocatable :: tree_mold(:)
 
-    ! Error codes of tree processing routines
-    integer, parameter, public :: TREE_ERR_OK = 0,         &
-    &                             TREE_ERR_NOCURRENT = -1, &
-    &                             TREE_ERR_EMPTY = -2,     &
-    &                             TREE_ERR_NONEXT = 1
-
-    ! Function to compare two tree nodes
-    !abstract interface
-    !  integer function cfun_abstract(a, b)
-    !    import DAT_KIND
-    !    integer(DAT_KIND), intent(in) :: a(:), b(:)
-    !  end function
-    !end interface
 
 
-
-    ! base tree class
+    ! Base tree class
     type :: basenode_t
       private
       class(basenode_t), pointer :: parent => null()
@@ -49,20 +34,22 @@
       procedure :: Rightchild => basenode_Rightchild
       procedure :: Grandparent => basenode_Grandparent
       procedure :: Uncle => basenode_Uncle
-      !final :: basenode_Destructor
+      !final :: basenode_Destructor ! not needed
     end type basenode_t
 
 
 
-    type :: basetree_t
+    type, extends(container_t) :: basetree_t
       private
       class(basenode_t), pointer :: root => null()
       integer :: nodes = 0
       procedure(compare_fun), pointer, nopass, public :: cfun => null()
     contains
-      !procedure :: Initialize => basetree_Initialize
+      procedure :: Initialize => basetree_Initialize2
       procedure :: Add => basetree_Add
       procedure :: Add2 => basetree_Add2
+      procedure :: Remove => basetree_Delete
+      procedure :: Removeall => basetree_Removeall
       procedure :: Isin => basetree_Isin
       procedure :: Isempty => basetree_Isempty
       procedure :: Read => basetree_Read
@@ -72,10 +59,12 @@
       procedure :: Nextnode => basetree_Nextnode
       procedure :: Printcurrentnode => basetree_Printcurrentnode
       final :: basetree_Destructor
-      procedure :: Size => basetree_Nodes
+      procedure :: Count => basetree_Nodes
       procedure :: Isvalid_BST => basetree_Isvalid_BST
       procedure :: Height_range => basetree_Height_range
-      procedure :: Display => basetree_Display
+      procedure :: Print => basetree_Display
+      procedure :: Copy => basetree_Copy
+      !generic :: assignment(=) => Copy
     end type basetree_t
 
     interface basetree_t
@@ -88,6 +77,10 @@
 
 
     interface
+      module subroutine basetree_Initialize2(this)
+        class(basetree_t), intent(inout) :: this
+      end subroutine
+
       module function basetree_Printcurrentnode(this, handle) result(str)
         class(basetree_t), intent(in) :: this
         integer(DAT_KIND), intent(in) :: handle(:)
@@ -113,7 +106,7 @@
         integer(DAT_KIND), intent(in) :: dat(:)
       end function basetree_Isin
 
-      module function basetree_Isempty(this) result(isempty)
+      module pure function basetree_Isempty(this) result(isempty)
         logical :: isempty
         class(basetree_t), intent(in) :: this
       end function basetree_IsEmpty
@@ -149,7 +142,7 @@
         integer, intent(out), optional :: ierr
       end subroutine basetree_Firstnode
 
-      module subroutine basetree_Resetcurrent(this, handle)
+      module pure subroutine basetree_Resetcurrent(this, handle)
         class(basetree_t), intent(in) :: this
         integer(DAT_KIND), allocatable, intent(out) :: handle(:)
       end subroutine basetree_Resetcurrent
@@ -174,9 +167,26 @@
         type(basetree_t), intent(inout) :: this
       end subroutine basetree_Destructor
 
+      module subroutine basetree_Removeall(this)
+        class(basetree_t), intent(inout) :: this
+      end subroutine basetree_Removeall
+
       module subroutine basetree_Display(this)
         class(basetree_t), intent(in) :: this
       end subroutine basetree_Display
+
+      module subroutine basetree_Delete(this, dat, ierr)
+        class(basetree_t), intent(inout) :: this
+        integer(DAT_KIND), intent(in) :: dat(:)
+        integer, optional, intent(out) :: ierr
+      end subroutine basetree_Delete
+
+      module subroutine basetree_Copy(aout, bin)
+        class(basetree_t), intent(out) :: aout
+        class(container_t), intent(in) :: bin
+        !class(basetree_t), intent(in) :: bin
+      end subroutine
+
     end interface
 
 

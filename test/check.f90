@@ -1,18 +1,57 @@
   program check
     implicit none
-    integer :: n
+    integer :: n, tree_type
     logical :: is_validated
+    real :: cpu_0, cpu_1
 
     write(*,'(a)',advance='no') 'Items = ? '
     read(*,*) n
     print *
+    write(*,'(a)',advance='no') 'Type of tree (1:red-black 2:basic) = ? '
+    read(*,*) tree_type
+    print *
 
-    call test2()
+    !call test2()
+    !call test1()
 
     is_validated = .false.
     if (n < 1001) is_validated = .true.
-    call test3(n, is_validated)
+    call cpu_time(cpu_0)
+    call test3(n, is_validated, tree_type)
+    call cpu_time(cpu_1)
+    cpu_1 = cpu_1 - cpu_0
+    print *, 'Elapsed time: ',cpu_1, ' (per node:',cpu_1/real(n)
   end program check
+
+
+
+  subroutine test1
+    use tree_m
+    use tree_tests_m
+    implicit none
+    type(rbtr_t) :: a_rb, b_rb, c_rb
+    type(basetree_t) :: a_bas, b_bas, c_bas
+    procedure(compare_fun) :: compare_nodes_fun
+
+    print *, 'RUNNING TEST #1'
+
+    !a_rb = rbtr_t(compare_nodes_fun)
+    a_rb = basetree_t(compare_nodes_fun)
+    call Insert_nodes(a_rb, [10, 7, 5, 2, 6, 3] )
+    !call Insert_nodes(a_rb, [10, 7, 5, 2, 6, 3] )
+
+    b_rb = a_rb
+
+    call Insert_nodes(a_rb, [33] )
+    call Print_nodes(a_rb)
+    call Print_nodes(b_rb)
+    print *, ' validated? ', b_rb % isvalid_bst() , b_rb % isvalid_rbtree()
+
+    call Delete_nodes(a_rb, [10, 7, 5, 2, 6, 3] )
+    call Print_nodes(a_rb)
+    call Print_nodes(b_rb)
+    print *, 'end of t1'
+  end subroutine test1
 
 
 
@@ -38,7 +77,7 @@
     call Print_nodes(aobj)
     print *, 'Height of tree is: ', aobj % Height_range()
     print *
- call aobj % Display()
+ call aobj % Print()
 
     call Print_nodes(bobj)
     call Insert_nodes(bobj, [10, 20, 30, 40, 50, 60])
@@ -46,25 +85,26 @@
     call Print_nodes(bobj)
     print *, 'Height of basetree is: ', bobj % Height_range()
     print *
- call bobj % Display()
+ call bobj % Print()
 
     call Insert_nodes(cobj, [10, 5, 7, 8, 9, 11, 12, 13])
     call Print_nodes(cobj)
     print *, 'Height of tree is: ', cobj % Height_range()
     print *
- call cobj % Display()
+ call cobj % Print()
 
   end subroutine test2
 
 
 
-  subroutine test3(nsize, is_validated)
+  subroutine test3(nsize, is_validated, tree_type)
     use tree_tests_m
-    use tree_m, only : rbtr_t, compare_fun
+    use tree_m, only : basetree_t, rbtr_t, compare_fun
 
-    integer, intent(in) :: nsize
+    integer, intent(in) :: nsize, tree_type
     logical, intent(in) :: is_validated
-    type(rbtr_t) :: tree
+    !type(rbtr_t) :: tree
+    class(basetree_t), allocatable :: tree
     integer, allocatable, dimension(:) :: y0, ys, yinside, yremoved
     integer :: i, ipart, hr(2)
     real :: log_of_size
@@ -73,8 +113,21 @@
 
     print '(a)', 'RUNNING TEST #3'
 
-    ! Initialization is compulsory
-    tree = rbtr_t(compare_nodes_fun)
+
+    select case(tree_type)
+    case(1)
+      print '(a)', 'RED-BLACK TREE'
+      ! Initialization is compulsory
+      allocate(rbtr_t :: tree) ! avoid segm fault?
+      tree = rbtr_t(compare_nodes_fun)
+    case(2)
+      print '(a)', 'BASE TREE'
+      ! Initialization is compulsory
+      allocate(basetree_t :: tree) ! avoid segm fault?
+      tree = basetree_t(compare_nodes_fun)
+    case default
+      error stop 'invalid selection'
+    end select
 
     ! Fill by N items
     y0 = Get_array(nsize)
@@ -83,10 +136,10 @@
 
     ! Height of the tree
     hr = tree % Height_range()
-    log_of_size = log(real(tree%size())) / log(2.0)
+    log_of_size = log(real(tree%count())) / log(2.0)
     print '(a,i0,a,i0,a,f6.2,a,i0,a)', &
     &   'Tree size (hmin<log2(size)<hmax): ', &
-    &   tree%size(),' (', hr(1),' <', log_of_size,' < ', hr(2),')'
+    &   tree%count(),' (', hr(1),' <', log_of_size,' < ', hr(2),')'
 
     if (nsize < 1001) then
       call Print_nodes2(tree)

@@ -24,7 +24,7 @@
         'Inserting nodes...   {N=',size(arr_data), &
         ' inter-validation=',isvalidated0,'}'
 
-      nodes0 = tree % Size()
+      nodes0 = tree % Count()
       do i = 1, size(arr_data)
         call tree % Add(arr_data(i:i))
         if (isvalidated0) then
@@ -38,7 +38,7 @@
           if (.not. (isvalid_rb .and. isvalid_bst)) exit
         endif
       enddo
-      nodes1 = tree % Size()
+      nodes1 = tree % Count()
 
       ! If not validated in the loop, validate at the end
       if (.not. isvalidated0 .or. size(arr_data) < 1) then
@@ -140,17 +140,17 @@
         'Deleting nodes...   {N=',size(arr_data), &
         ' inter-validation=',isvalidated0,'}'
 
-      nodes0 = tree % Size()
+      nodes0 = tree % Count()
       do i = 1, size(arr_data)
         exists = tree % Isin(arr_data(i:i))
         if (exists) then
-          select type(tree)
-          class is (rbtr_t)
+          !select type(tree)
+          !class is (rbtr_t)
             call tree % remove(arr_data(i:i))
-          class default
-            print *, 'TODO - basetree deletion not implemented'
-            exit
-          end select
+          !class default
+          !  print *, 'TODO - basetree deletion not implemented'
+          !  exit
+          !end select
         else
           print '(a,i0,a)', '  node=',arr_data(i),' not found'
         endif
@@ -166,7 +166,7 @@
           if (.not. (isvalid_rb .and. isvalid_bst)) exit
         endif
       enddo
-      nodes1 = tree % Size()
+      nodes1 = tree % Count()
 
       ! If not validated in the loop, validate at the end
       if (.not. isvalidated0 .or. size(arr_data) < 1) then

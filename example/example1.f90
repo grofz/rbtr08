@@ -36,7 +36,7 @@
 
     print '(a,L1,1x,L2)', 'Is tree valid?  ', &
     &  tree % Isvalid_rbtree(), tree % Isvalid_bst()
-    print '(a,i0,a,i0,1x,i0)', 'Tree size =', tree % size(), &
+    print '(a,i0,a,i0,1x,i0)', 'Tree size =', tree % count(), &
     &       ' height range=', tree % Height_range()
 
     ! Iterate tree
@@ -44,7 +44,7 @@
 
     ! Remove nodes
     do
-      if (tree % size() == 0) exit
+      if (tree % count() == 0) exit
       call tree % Firstnode(handle)
       adat = transfer(tree % Read(handle), adat)
       print *, '  node = ', adat % ptr % a, ' will be removed'

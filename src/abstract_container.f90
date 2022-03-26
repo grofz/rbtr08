@@ -44,7 +44,7 @@
 
 
     abstract interface
-      pure subroutine init_fun(this)
+      subroutine init_fun(this)
         import
         class(container_t), intent(inout) :: this
 !

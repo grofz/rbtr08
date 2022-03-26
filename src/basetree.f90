@@ -7,6 +7,17 @@
 
   contains
 
+    module subroutine basetree_Initialize2(this)
+      class(basetree_t), intent(inout) :: this
+!
+! Use a copy of a tree to make an empty tree
+!
+      this % root => null()
+      this % nodes = 0
+    end subroutine basetree_Initialize2
+
+
+
     module function basetree_Printcurrentnode(this, handle) result(str)
 !
 ! Display content of the "current" node
@@ -216,7 +227,7 @@ print *, "insert_recurse: duplicit not ready yet"
 
 
 
-    module function basetree_Isempty(this) result(isempty)
+    pure module function basetree_Isempty(this) result(isempty)
       logical :: isempty
       class(basetree_t), intent(in) :: this
 
@@ -606,7 +617,7 @@ print *, "insert_recurse: duplicit not ready yet"
 
 
 
-    module subroutine basetree_Resetcurrent(this, handle)
+    module pure subroutine basetree_Resetcurrent(this, handle)
       class(basetree_t), intent(in) :: this
       integer(DAT_KIND), intent(out), allocatable :: handle(:)
 !
@@ -871,6 +882,21 @@ print *, "insert_recurse: duplicit not ready yet"
 
 
 
+    module subroutine basetree_Removeall(this)
+      class(basetree_t), intent(inout) :: this
+
+      integer :: counter
+
+      counter = 0
+      if (associated(this % root)) call delete_recurse(this % root, counter)
+      if (this % nodes /= counter) &
+      &   error stop "basetree_Removeall: counter mismatch"
+      this % root => null()
+      this % nodes = 0
+    end subroutine basetree_Removeall
+
+
+
     module subroutine basetree_Destructor(this)
       type(basetree_t), intent(inout) :: this
 !
@@ -879,9 +905,9 @@ print *, "insert_recurse: duplicit not ready yet"
       integer :: counter
 
       counter = 0
-print *, 'In basetree_Destructor...'
+!print *, 'In basetree_Destructor...'
       if (associated(this % root)) call delete_recurse(this % root, counter)
-print *, '...deleted nodes = ', counter
+!print *, '...deleted nodes = ', counter
 
       if (this % nodes /= counter) &
       &   error stop "basetree_Delete: counter mismatch"
@@ -1027,5 +1053,112 @@ print *, '...deleted nodes = ', counter
 
 
 
+    module subroutine basetree_Delete(this, dat, ierr)
+      class(basetree_t), intent(inout) :: this
+      integer(DAT_KIND), intent(in) :: dat(:)
+      integer, optional, intent(out) :: ierr
+
+      integer :: ierr0
+      logical :: lfreed
+      class(basenode_t), pointer :: n, ch
+
+      ! Verify that node is in tree, return if not
+      n => search_node(this, dat)
+      if (associated(n)) then
+        ierr0 = ERR_CONT_OK
+      else
+        ierr0 = ERR_CONT_ISNOT
+      endif
+      if (present(ierr)) ierr = ierr0
+      if (.not. present(ierr) .and. ierr0 /= ERR_CONT_OK) &
+          error stop 'basetree_Delete, element not in the tree'
+      if (ierr0 /= ERR_CONT_OK) return
+
+      ! Case 1: If N has two children
+      ! - find the successor node, move content of that node to the current
+      !   node to be deleted and then delete the successor node
+      ! - continue to Case 2
+      if (associated(n% Leftchild()) .and. associated(n% Rightchild())) then
+        ch => Leftmost(n % Rightchild())
+        call move_alloc(ch % dat, n % dat)
+        n => ch
+        lfreed = .true.
+      else
+        lfreed = .false.
+      endif
+
+
+      ! Case 2: If N has one child CH, N can be replaced by CH
+      ! If N has no child, it can be removed
+      if (associated(n % Leftchild())) then
+        ch => n % Leftchild()
+      elseif (associated(n % Rightchild())) then
+        ch => n % Rightchild()
+      else
+        ch => null()
+      endif
+
+      if (.not. associated(ch)) then
+        ! N has no children
+        if (.not. associated(n % Parentf())) then
+          ! N was root
+          this % root => null()
+        elseif (Is_left_child(n)) then
+          n % parent % left => null()
+        elseif (Is_right_child(n)) then
+          n % parent % right => null()
+        else
+          error stop 'basetree_Delete: impossible branch' ! TODO temp check
+        endif
+
+      else
+        ! N has one child
+        ch % parent => n % parent
+        if (.not. associated(n % Parentf())) then
+          ! N was root, CH is now root
+          this % root => ch
+        elseif (Is_left_child(n)) then
+          n % parent % left => ch
+        elseif (Is_right_child(n)) then
+          n % parent % right => ch
+        else
+          error stop 'basetree_Delete: impossible branch2' ! TODO temp check
+        endif
+      endif
+
+      ! N can be now deallocated
+      this % nodes = this % nodes - 1
+      if (.not. lfreed) deallocate(n % dat)
+      deallocate(n)
+    end subroutine basetree_Delete
+
+
+
+    subroutine basetree_Copy(aout, bin)
+      class(basetree_t), intent(out) :: aout
+      !class(basetree_t), intent(in)  :: bin
+      class(container_t), intent(in)  :: bin
+!
+! Copy constructor for binary trees
+!
+      integer(DAT_KIND), allocatable :: handle(:), dat(:)
+      integer :: ierr
+
+      call aout % initialize()
+      select type(bin)
+      class is (basetree_t)
+        aout % cfun => bin % cfun
+      class default
+        error stop 'basetree_copy: can copy only trees'
+      end select
+
+      if (bin % isempty()) return
+      call bin % resetcurrent(handle)
+      do
+        dat = bin % nextread(handle, ierr)
+        if (ierr /= ERR_CONT_OK) exit
+        call aout % add(dat)
+      enddo
+    end subroutine basetree_Copy
 
   end submodule basetree
