@@ -29,6 +29,7 @@
       procedure(copy_fun), deferred :: copy
       procedure(print_fun), deferred :: print
       generic :: assignment(=) => copy
+      procedure, non_overridable :: datasize, constantdatasize
     end type container_t
 
 
@@ -135,5 +136,47 @@
       end subroutine
 
     end interface
+
+  contains
+
+!
+! Inquire the container on the (maximum) size of "data" array for single 
+! element and whether the size is same for all elements.
+!
+    function datasize(this) result(n)
+      class(container_t), intent(in) :: this
+      integer :: n
+
+      integer(DAT_KIND), allocatable :: dat(:), handle(:)
+      integer :: ierr
+
+      n = 0
+      call this % resetcurrent(handle)
+      do
+        dat = this % nextread(handle, ierr)
+        if (ierr /= ERR_CONT_OK) exit
+        n = max(size(dat), n)
+      enddo
+    end function datasize
+
+    logical function constantdatasize(this) result(same)
+      class(container_t), intent(in) :: this
+      
+      integer(DAT_KIND), allocatable :: dat(:), handle(:)
+      integer :: ierr, n
+
+      call this % resetcurrent(handle)
+      n = -2 
+      same = .true.
+      do
+        dat = this % nextread(handle, ierr)
+        if (ierr /= ERR_CONT_OK) exit
+        if (n == -2) n = size(dat)
+        if (size(dat) /= n) then
+          same = .false.
+          exit
+        endif
+      enddo
+    end function constantdatasize
 
   end module abstract_container
