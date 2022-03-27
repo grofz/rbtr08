@@ -1,11 +1,11 @@
 !
-! Red black tree implementation
+! Red black tree implementation (SUBMODULE)
 !
   submodule(tree_m) rbtr
 
     implicit none
 
-    type node_ptr
+    type basenode_ptr
       class(basenode_t), pointer :: p
     end type
 
@@ -16,7 +16,7 @@
       class(rbtr_t), intent(in) :: this
       integer(DAT_KIND), intent(in) :: handle(:)
       character(len=1000) :: color
-      type(node_ptr) :: cp
+      type(basenode_ptr) :: cp
 
       cp = transfer(handle, cp)
       if (.not. associated(cp % p)) then
@@ -48,30 +48,19 @@
       integer, intent(out), optional :: ierr
 !
 ! Insert a node to a red-black tree.
-! [over-riding type-bound procedure in "basetree" class]
-!
 ! Get a new node as "rbnode_t" and call insertion procedure of a base class.
 ! Then repair the tree.
 !
-!TODO rbtr_Add a rbtr_Add2 jsou kandidati na slouceni
-!
       integer :: ierr0
-      class(basenode_t), pointer :: new0
+      class(basenode_t), pointer :: newnode
 
       if (.not. associated(this % cfun)) &
           error stop 'rbtr_Insert: cfun procedure pointer not associated'
 
-      allocate(rbnode_t :: new0)
-      select type(new0)
-      class is (rbnode_t)
-        new0 % color = RED_NODE
-      class default
-        error stop "rbtr_Insert: newnode must be an extension of rbnode_t"
-      end select
-
-      call this % basetree_t % Add2(dat, newnode=new0, ierr=ierr0)
-
-      if (ierr0 == ERR_CONT_OK) call insert_repair_tree(this, new0)
+      ! Default "newnode % color" must be RED_NODE
+      allocate(rbnode_t :: newnode)
+      call Add2(this, dat, newnode, ierr=ierr0)
+      if (ierr0 == ERR_CONT_OK) call insert_repair_tree(this, newnode)
 
       if (present(ierr)) then
         ierr = ierr0
@@ -79,19 +68,6 @@
         error stop 'rbtree_Add: element already in the tree'
       endif
     end subroutine rbtr_Add
-
-
-
-    module subroutine rbtr_Add2(this, dat, newnode, ierr)
-      class(rbtr_t), intent(inout)  :: this
-      integer(DAT_KIND), intent(in) :: dat(:)
-      class(basenode_t), pointer, optional :: newnode
-      integer, intent(out), optional :: ierr
-! [over-riding type-bound procedure in "basetree" class]
-! call Add instead
-
-      error stop "rbtr_Add2 should not be called."
-    end subroutine rbtr_Add2
 
 
 
@@ -155,6 +131,82 @@
         endif
       endif
     end subroutine insert_repair_tree
+
+
+
+    module subroutine rbtr_Update(this, olddat, newdat, ierr)
+      class(rbtr_t), intent(inout) :: this
+      integer(DAT_KIND), intent(in) :: olddat(:), newdat(:)
+      integer, intent(out), optional :: ierr
+
+      integer :: ierr0
+      class(basenode_t), pointer :: tmp, new
+
+      ! Assert that updated value is not in tree.
+      ! If ok, remove old node.
+      tmp => Search_node(this, newdat)
+      if (associated(tmp)) then
+        ierr0 = ERR_CONT_IS
+      else
+        ! ierr0 will be ERR_CONT_ISNOT or ERR_CONT_OK
+        call this % Remove(olddat, ierr0)
+      endif
+      if (present(ierr)) then
+        ierr = ierr0
+      elseif (ierr0 /= ERR_CONT_OK) then
+        print *, 'ERROR CODE =', ierr0
+        error stop 'rbtr_Update: old not found or new value already in tree'
+      endif
+      if (ierr0 /= ERR_CONT_OK) return
+
+      ! Re-add with a new value
+      allocate(rbnode_t :: new)
+      call Add2(this, newdat, new)
+      call insert_repair_tree(this, new)
+    end subroutine rbtr_Update
+
+
+
+    module subroutine rbtr_Updatecurrent(this, handle, newdat, ierr)
+      class(rbtr_t), intent(inout) :: this
+      integer(DAT_KIND), intent(inout) :: handle(:)
+      integer(DAT_KIND), intent(in) :: newdat(:)
+      integer, intent(out), optional :: ierr
+
+      integer :: ierr0, ierr1
+      type(basenode_ptr) :: cp
+      class(basenode_t), pointer :: old, tmp, new
+
+      cp = transfer(handle, cp)
+      old => cp % p
+      if (associated(old)) then
+        ! Assert that updated value is not in tree.
+        ! If ok, remove old node.
+        tmp => Search_node(this, newdat)
+        if (associated(tmp)) then
+          ierr0 = ERR_CONT_IS
+        else
+          call this % Remove(old % dat, ierr1)
+          if (ierr1 /= ERR_CONT_OK) &
+            error stop 'rbtr_Updatecurrent: handled node not in tree'
+          ierr0 = ERR_CONT_OK
+        endif
+
+      else
+        ierr0 = ERR_CONT_END
+      endif
+      if (present(ierr)) then
+        ierr = ierr0
+      elseif (ierr0 /= ERR_CONT_OK) then
+        error stop 'rbtr_Updatecurrent: new value already in tree'
+      endif
+      if (ierr0 /= ERR_CONT_OK) return
+
+      ! Re-add with a new value
+      allocate(rbnode_t :: new)
+      call Add2(this, newdat, new)
+      call insert_repair_tree(this, new)
+    end subroutine rbtr_Updatecurrent
 
 
 

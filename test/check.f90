@@ -29,9 +29,11 @@
     use tree_m
     use tree_tests_m
     implicit none
-    type(rbtr_t) :: a_rb, b_rb, c_rb
-    type(basetree_t) :: a_bas, b_bas, c_bas
+    type(rbtr_t) :: b_rb, c_rb
+    type(basetree_t) :: a_rb, a_bas, b_bas, c_bas
     procedure(compare_fun) :: compare_nodes_fun
+    integer(DAT_KIND), allocatable :: handle(:)
+    integer :: ierr
 
     print *, 'RUNNING TEST #1'
 
@@ -43,9 +45,19 @@
     call Insert_nodes(a_rb, [33, 44, 55, 66, 77, 88, 27, 41] )
     call a_rb % print()
 
+    ! test update
+    call a_rb % Firstnode(handle)
+    call a_rb % Nextnode(handle)
+    call a_rb % Nextnode(handle)
+    print *, 'A is ', a_rb % Printcurrentnode(handle)
+    print *,'... update xxx[by xxx ...'
+    call a_rb % Updatecurrent(handle, [4], ierr)
+    print *, '... error code =', ierr, a_rb % Isvalid_BST() !, a_rb % Isvalid_rbtree()
+    call a_rb % print()
+
     b_rb = a_rb
 
-    call Insert_nodes(a_rb, [33] )
+    call Insert_nodes(a_rb, [35] )
     call Print_nodes(a_rb)
     call Print_nodes(b_rb)
     print *, ' validated? ', b_rb % isvalid_bst() , b_rb % isvalid_rbtree()

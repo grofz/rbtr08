@@ -1,6 +1,10 @@
+!
+! Tree implementation (SUBMODULE)
+!
   submodule(tree_m) basetree
     implicit none
 
+    ! local type (used for exporting the pointer to node via handle)
     type basenode_ptr
       class(basenode_t), pointer :: p
     end type basenode_ptr
@@ -10,7 +14,8 @@
     module subroutine basetree_Initialize2(this)
       class(basetree_t), intent(inout) :: this
 !
-! Use a copy of a tree to make an empty tree
+! Use a copy of an existing tree to make an empty tree
+! (MUST REMAIN INOUT)
 !
       this % root => null()
       this % nodes = 0
@@ -59,7 +64,7 @@
       integer :: ierr0
       class(basenode_t), pointer :: newnode
       allocate(basenode_t :: newnode)
-      call basetree_Add2(this, dat, newnode, ierr0)
+      call Add2(this, dat, newnode, ierr0)
       if (present(ierr)) then
         ierr = ierr0
       elseif (ierr0 /= ERR_CONT_OK) then
@@ -69,20 +74,16 @@
 
 
 
-    module subroutine basetree_Add2(this, dat, newnode, ierr)
+    module subroutine Add2(this, dat, newnode, ierr)
       class(basetree_t), intent(inout) :: this
       integer(DAT_KIND), intent(in) :: dat(:)
-      class(basenode_t), pointer, optional :: newnode
+      class(basenode_t), pointer :: newnode
       integer, intent(out), optional :: ierr
 !
 ! Insert a new node to the tree.
-! If pointer "newnode" is present, the existing node is used,
-! otherwise a new "basenode_t" node is allocated.
-! The "dat" component of an existing node must be deallocated. 
+! The "dat" component of "newnode" must not be allocated. 
+! If insertion fails due to ERR_CONT_IS, "newnode" is deallocated.
 !
-! The "current" pointer is unchanged.
-!        
-      class(basenode_t), pointer :: new0
       integer :: ierr0
 
       if (.not. associated(this % cfun)) &
@@ -90,41 +91,36 @@
 
       ! Prepare new node to be selected to the tree
       ! Node type other than "basenode_t" must be allocated up-stream
-      if (present(newnode)) then
-        new0 => newnode
-      else
-        allocate(basenode_t :: new0)
-      endif
-      if (.not. associated(new0)) &
+      if (.not. associated(newnode)) &
       &   error stop 'basetree_Insert: newnode points nowhere'
 
       ! Fail if neccessary to prevent inadvertent data overwriting
-      if (allocated(new0 % dat)) &
+      if (allocated(newnode % dat)) &
       &   error stop 'basetree_Insert: newnode already contains data'
 
-      new0 % dat = dat
+      newnode % dat = dat
       if (.not. associated(this % root)) then
         ! tree is empty
-        this % root => new0
+        this % root => newnode
         if (this % nodes /= 0) &
         &   error stop 'basetree_Insert: nodes /= 0 for the first node'
         ierr0 = ERR_CONT_OK
       else
-        call insert_recurse(this, this % root, new0, this % cfun, ierr0)
+        call insert_recurse(this, this % root, newnode, this % cfun, ierr0)
       endif
 
       if (ierr0 == ERR_CONT_OK) then
         this % nodes = this % nodes + 1
       else
-        if (present(newnode)) newnode => null()
-        deallocate(new0)
+        !if (present(newnode)) newnode => null()
+        deallocate(newnode)
       endif
       if (present(ierr)) then
         ierr = ierr0
       elseif (ierr0 /= ERR_CONT_OK) then
         error stop 'basetree_Add2: element already in the tree'
       endif
-    end subroutine basetree_Add2
+    end subroutine Add2
 
 
 
@@ -174,6 +170,80 @@ print *, "insert_recurse: duplicit not ready yet"
 
 
 
+    module subroutine basetree_Update(this, olddat, newdat, ierr)
+      class(basetree_t), intent(inout) :: this
+      integer(DAT_KIND), intent(in) :: olddat(:), newdat(:)
+      integer, intent(out), optional :: ierr
+
+      integer :: ierr0
+      class(basenode_t), pointer :: tmp, new
+
+      ! Assert that updated value is not in tree.
+      ! If ok, remove old node.
+      tmp => Search_node(this, newdat)
+      if (associated(tmp)) then
+        ierr0 = ERR_CONT_IS
+      else
+        ! ierr0 will be ERR_CONT_ISNOT or ERR_CONT_OK
+        call this % Remove(olddat, ierr0)
+      endif
+      if (present(ierr)) then
+        ierr = ierr0
+      elseif (ierr0 /= ERR_CONT_OK) then
+        print *, 'ERROR CODE =', ierr0
+        error stop 'basetree_Update: old not found or new value already in tree'
+      endif
+      if (ierr0 /= ERR_CONT_OK) return
+
+      ! Re-add with a new value
+      allocate(basenode_t :: new)
+      call Add2(this, newdat, new)
+    end subroutine basetree_Update
+
+
+
+    module subroutine basetree_Updatecurrent(this, handle, newdat, ierr)
+      class(basetree_t), intent(inout) :: this
+      integer(DAT_KIND), intent(inout) :: handle(:)
+      integer(DAT_KIND), intent(in) :: newdat(:)
+      integer, intent(out), optional :: ierr
+
+      integer :: ierr0, ierr1
+      type(basenode_ptr) :: cp
+      class(basenode_t), pointer :: old, tmp, new
+
+      cp = transfer(handle, cp)
+      old => cp % p
+      if (associated(old)) then
+        ! Assert that updated value is not in tree.
+        ! If ok, remove old node.
+        tmp => Search_node(this, newdat)
+        if (associated(tmp)) then
+          ierr0 = ERR_CONT_IS
+        else
+          call this % Remove(old % dat, ierr1)
+          if (ierr1 /= ERR_CONT_OK) &
+            error stop 'basetree_Updatecurrent: handled node not in tree'
+          ierr0 = ERR_CONT_OK
+        endif
+
+      else
+        ierr0 = ERR_CONT_END
+      endif
+      if (present(ierr)) then
+        ierr = ierr0
+      elseif (ierr0 /= ERR_CONT_OK) then
+        error stop 'basetree_Updatecurrent: new value already in tree'
+      endif
+      if (ierr0 /= ERR_CONT_OK) return
+
+      ! Re-add with a new value
+      allocate(basenode_t :: new)
+      call Add2(this, newdat, new)
+    end subroutine basetree_Updatecurrent
+
+
+
     module function basetree_Isin(this, dat) result(exists)
       logical :: exists
       class(basetree_t), intent(in) :: this
@@ -187,7 +257,7 @@ print *, "insert_recurse: duplicit not ready yet"
       if (.not. associated(this % cfun)) &
           error stop 'basetree_Exists: cfun procedure pointer not associated'
 
-      foundnode => search_node(this, dat)
+      foundnode => Search_node(this, dat)
       if (associated(foundnode)) then
         exists = .true.
         !!this % current => foundnode
@@ -198,7 +268,7 @@ print *, "insert_recurse: duplicit not ready yet"
 
 
 
-    module function search_node(this, dat) result(foundnode)
+    module function Search_node(this, dat) result(foundnode)
       class(basenode_t), pointer :: foundnode
       class(basetree_t), intent(in) :: this
       integer(DAT_KIND), intent(in) :: dat(:)
@@ -223,7 +293,7 @@ print *, "insert_recurse: duplicit not ready yet"
           error stop "Exists: invalid resutl from cfun"
         end select 
       enddo
-    end function search_node
+    end function Search_node
 
 
 
@@ -293,11 +363,9 @@ print *, "insert_recurse: duplicit not ready yet"
 
       cp = transfer(handle, cp)
 
-      !ierr0 = TREE_ERR_OK
       ierr0 = ERR_CONT_OK
       if (.not. associated(this % root)) then
         ierr0 = ERR_CONT_END
-        !ierr0 = TREE_ERR_EMPTY
         dat = empty_data
       elseif (.not. associated(cp % p)) then
         cp % p => Leftmost(this % root)
@@ -307,7 +375,6 @@ print *, "insert_recurse: duplicit not ready yet"
         if (associated(cp % p)) then
           dat = cp % p % dat
         else
-          !ierr0 = TREE_ERR_NOCURRENT
           ierr0 = ERR_CONT_END
           dat = empty_data
         endif
@@ -446,7 +513,7 @@ print *, "insert_recurse: duplicit not ready yet"
         rot % parent => null()
         a % root => rot
  ! TODO temporary defensive check
- if (is_lc .or. is_rc) error stop "Rotator_left: Defensive check"
+ !if (is_lc .or. is_rc) error stop "Rotator_left: Defensive check"
 
       else
         ! Pivot was a parent's child, rotator takes its place.
@@ -500,8 +567,8 @@ print *, "insert_recurse: duplicit not ready yet"
         ! Pivot was a root node, rotator is a new root
         rot % parent => null()
         a % root => rot
- !TODO Temporary defensive check
- if (is_lc .or. is_rc) error stop "Rotator_right: Defensive check"
+!TODO Temporary defensive check
+!if (is_lc .or. is_rc) error stop "Rotator_right: Defensive check"
 
       else
         ! Pivot was a parent's child, rotator takes its place
@@ -558,27 +625,6 @@ print *, "insert_recurse: duplicit not ready yet"
         is_right_child = .false.
       endif
     end function Is_right_child
-
-
-
-   ! logical function Is_inner_grandparent(n)
-   !   class(basenode_t), intent(in), pointer :: n
-!
-! True if "n" is in the inner sub-tree of his grand-parent
-! (to be used by red-black tree insetion algorithm)
-!
-      !class(basenode_t), pointer :: p
-
-      !is_inner_grandparent = .false.
-      !p => n % Parentf()
-      !if (.not. associated(p)) return
-
-      !if (Is_left_child(n)) then
-      !  if (Is_right_child(p)) is_inner_grandparent = .true.
-      !elseif (Is_right_child(n)) then
-      !  if (Is_left_child(p)) is_inner_grandparent = .true.
-      !endif
-    !end function Is_inner_grandparent
 
 
 
@@ -902,6 +948,7 @@ print *, "insert_recurse: duplicit not ready yet"
 !
 ! Finalize the "basetree_t" object
 !
+!TODO Duplicit code with Removeall
       integer :: counter
 
       counter = 0
@@ -1089,7 +1136,7 @@ print *, "insert_recurse: duplicit not ready yet"
       class(basenode_t), pointer :: n, ch
 
       ! Verify that node is in tree, return if not
-      n => search_node(this, dat)
+      n => Search_node(this, dat)
       if (associated(n)) then
         ierr0 = ERR_CONT_OK
       else
@@ -1114,8 +1161,8 @@ print *, "insert_recurse: duplicit not ready yet"
       endif
 
 
-      ! Case 2: If N has one child CH, N can be replaced by CH
-      ! If N has no child, it can be removed
+      ! Case 2: N now must have one or no children
+      ! N can be replaced by CH (if it has one) or be removed
       if (associated(n % Leftchild())) then
         ch => n % Leftchild()
       elseif (associated(n % Rightchild())) then
@@ -1124,32 +1171,19 @@ print *, "insert_recurse: duplicit not ready yet"
         ch => null()
       endif
 
-      if (.not. associated(ch)) then
-        ! N has no children
-        if (.not. associated(n % Parentf())) then
-          ! N was root
-          this % root => null()
-        elseif (Is_left_child(n)) then
-          n % parent % left => null()
-        elseif (Is_right_child(n)) then
-          n % parent % right => null()
-        else
-          error stop 'basetree_Delete: impossible branch' ! TODO temp check
-        endif
+      ! Link child to a new parent (parent of deleted node)
+      if (associated(ch)) ch % parent => n % parent
 
+      ! Link parent of deleted node N to child CH (or null)
+      if (.not. associated(n % Parentf())) then
+        ! N was root, CH or null is new root
+        this % root => ch
+      elseif (Is_left_child(n)) then
+        n % parent % left => ch
+      elseif (Is_right_child(n)) then
+        n % parent % right => ch
       else
-        ! N has one child
-        ch % parent => n % parent
-        if (.not. associated(n % Parentf())) then
-          ! N was root, CH is now root
-          this % root => ch
-        elseif (Is_left_child(n)) then
-          n % parent % left => ch
-        elseif (Is_right_child(n)) then
-          n % parent % right => ch
-        else
-          error stop 'basetree_Delete: impossible branch2' ! TODO temp check
-        endif
+        error stop 'basetree_Delete: impossible branch'
       endif
 
       ! N can be now deallocated
@@ -1160,12 +1194,12 @@ print *, "insert_recurse: duplicit not ready yet"
 
 
 
-    subroutine basetree_Copy(aout, bin)
+    module subroutine basetree_Copy(aout, bin)
       class(basetree_t), intent(out) :: aout
-      !class(basetree_t), intent(in)  :: bin
       class(container_t), intent(in)  :: bin
 !
-! Copy constructor for binary trees
+! Copy constructor for binary trees (required by abstract type container_t)
+! Source must be tree (compare_function pointer must be copied) 
 !
       integer(DAT_KIND), allocatable :: handle(:), dat(:)
       integer :: ierr
