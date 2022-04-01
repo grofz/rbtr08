@@ -53,6 +53,7 @@
       procedure :: Updatecurrent => basetree_Updatecurrent
       procedure :: Isin => basetree_Isin
       procedure :: Isempty => basetree_Isempty
+      procedure :: Find => basetree_Find
       procedure :: Read => basetree_Read
       procedure :: NextRead => basetree_NextRead
       procedure :: Resetcurrent => basetree_Resetcurrent
@@ -139,6 +140,13 @@
         class(basetree_t), intent(in) :: this
         integer(DAT_KIND), intent(in) :: dat(:)
       end function Search_node
+
+      module subroutine basetree_Find(this, dat, handle, ierr)
+        class(basetree_t), intent(in) :: this
+        integer(DAT_KIND), intent(in) :: dat(:)
+        integer(DAT_KIND), intent(out), allocatable :: handle(:)
+        integer, intent(out), optional :: ierr
+      end subroutine basetree_Find
 
       module function basetree_Read(this, handle, ierr) result(dat)
         integer(DAT_KIND), allocatable :: dat(:)

@@ -676,6 +676,26 @@ print *, "insert_recurse: duplicit not ready yet"
 
 
 
+      module subroutine basetree_Find(this, dat, handle, ierr)
+      class(basetree_t), intent(in) :: this
+      integer(DAT_KIND), intent(in) :: dat(:)
+      integer(DAT_KIND), intent(out), allocatable :: handle(:)
+      integer, intent(out), optional :: ierr
+
+      class(basenode_t), pointer :: foundnode
+      type(basenode_ptr) :: cp
+      integer :: ierr0
+
+      foundnode => Search_node(this, dat)
+      ierr0 = ERR_CONT_OK
+      if (.not. associated(foundnode)) ierr0 = ERR_CONT_ISNOT
+      cp % p => foundnode
+      handle = transfer(cp, handle)
+      if (present(ierr)) ierr = ierr0
+    end subroutine basetree_Find
+
+
+
     module subroutine basetree_Nextnode(this, handle, ierr)
       class(basetree_t), intent(in) :: this
       integer(DAT_KIND), intent(inout) :: handle(:)
