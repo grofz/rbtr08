@@ -147,6 +147,9 @@
       tmp => Search_node(this, newdat)
       if (associated(tmp)) then
         ierr0 = ERR_CONT_IS
+        ! if newdata semms same as olddata, this is not an error
+        if (0 == this % cfun(olddat, newdat)) &
+        &   call this % Remove(olddat, ierr0)
       else
         ! ierr0 will be ERR_CONT_ISNOT or ERR_CONT_OK
         call this % Remove(olddat, ierr0)
@@ -185,6 +188,9 @@
         tmp => Search_node(this, newdat)
         if (associated(tmp)) then
           ierr0 = ERR_CONT_IS
+          ! if newdata semms same as olddata, this is not an error
+          if (0 == this % cfun(old % dat, newdat)) &
+          &   call this % Remove(old % dat, ierr0)
         else
           call this % Remove(old % dat, ierr1)
           if (ierr1 /= ERR_CONT_OK) &
