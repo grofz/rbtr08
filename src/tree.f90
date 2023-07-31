@@ -194,7 +194,7 @@
         class(basetree_t), intent(in) :: this
       end function basetree_Height_range
 
-      module subroutine basetree_Destructor(this)
+      module impure elemental subroutine basetree_Destructor(this)
         type(basetree_t), intent(inout) :: this
       end subroutine basetree_Destructor
 

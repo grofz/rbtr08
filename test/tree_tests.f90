@@ -216,18 +216,27 @@
 !
 ! Copy items from yin to yout in a random order
 !
-      real :: xran(size(yin))
-      integer :: i, nleft, ipick, yin0(size(yin))
+      integer :: i, n, j, ytmp
+      real :: xran
 
-      call random_number(xran)
-      yin0 = yin
+      yout = yin
+      do i=1,size(yin)-1
+        call random_number(xran)
+        j = int(xran*(size(yin)-i+1))+i
+        ytmp = yout(i)
+        yout(i) = yout(j)
+        yout(j) = ytmp
+      end do
+      if (sum(yin)/=sum(yout)) error stop 'shuffle - error'
 
-      do i = 1, size(yin)
-        nleft = size(yin)-i+1
-        ipick = int(xran(i)*nleft) + 1
-        yout(i) = yin0(ipick)
-        yin0(ipick) = yin0(nleft)
-      enddo
+     !call random_number(xran)
+     !yin0 = yin
+     !do i = 1, size(yin)
+     !  nleft = size(yin)-i+1
+     !  ipick = int(xran(i)*nleft) + 1
+     !  yout(i) = yin0(ipick)
+     !  yin0(ipick) = yin0(nleft)
+     !enddo
     end function Shuffle_array
 
   end module tree_tests_m

@@ -4,6 +4,8 @@
     logical :: is_validated
     real :: cpu_0, cpu_1
 
+    call random_seed()
+    ! note, that using random_seed causes valgrind to report some leaks
     write(*,'(a)',advance='no') 'Items = ? '
     read(*,*) n
     print *
@@ -11,7 +13,7 @@
     read(*,*) tree_type
     print *
 
-    !call test2()
+    call test2()
     call test1()
 
     is_validated = .false.
@@ -215,6 +217,9 @@
     print '(a,i0)', 'Nodes left for destructor to remove: ',size(yinside)
     print *
     !call Delete_nodes(tree, yinside)
+
+    deallocate(tree)
+    deallocate(y0,ys,yinside,yremoved)
 
   end subroutine test3
 

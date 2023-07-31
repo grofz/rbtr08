@@ -969,7 +969,7 @@ print *, "insert_recurse: duplicit not ready yet"
 
 
 
-    module subroutine basetree_Destructor(this)
+    module impure elemental subroutine basetree_Destructor(this)
       type(basetree_t), intent(inout) :: this
 !
 ! Finalize the "basetree_t" object
@@ -978,9 +978,9 @@ print *, "insert_recurse: duplicit not ready yet"
       integer :: counter
 
       counter = 0
-!print *, 'In basetree_Destructor...'
+ print *, 'In basetree_Destructor...'
       if (associated(this % root)) call delete_recurse(this % root, counter)
-!print *, '...deleted nodes = ', counter
+ print *, '...deleted nodes = ', counter
 
       if (this % nodes /= counter) &
       &   error stop "basetree_Delete: counter mismatch"
