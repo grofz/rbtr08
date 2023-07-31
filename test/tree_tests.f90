@@ -57,7 +57,7 @@
         error stop "Tree invalidated during Insert_nodes"
       endif
 
-      print '(a,i0,ai0)', &
+      print '(a,i0,a,i0)', &
          '  nodes: before/after ',nodes0,'/',nodes1
       if (nodes1-nodes0 /= size(arr_data)) &
         error stop "Insertion error during Insert_nodes"
@@ -184,7 +184,7 @@
         error stop "Tree invalidated during Delete_nodes"
       endif
 
-      print '(a,i0,ai0)', &
+      print '(a,i0,a,i0)', &
          '  nodes: before/after ',nodes0,'/',nodes1
       if (nodes0-nodes1 /= size(arr_data)) &
           print '(a)', "WARNING: some nodes not deleted"

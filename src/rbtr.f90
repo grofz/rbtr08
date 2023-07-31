@@ -432,7 +432,7 @@
 
 
 
-    subroutine delete_case1(a, m)
+    recursive subroutine delete_case1(a, m)
       class(rbtr_t), intent(inout) :: a
       class(basenode_t), pointer :: m
 !
@@ -445,7 +445,7 @@
 
 
 
-    subroutine delete_case2(a, m)
+    recursive subroutine delete_case2(a, m)
       class(rbtr_t), intent(inout) :: a
       class(basenode_t), pointer :: m
 !
@@ -472,7 +472,7 @@
 
 
 
-    subroutine delete_case34(a, m)
+    recursive subroutine delete_case34(a, m)
       class(rbtr_t), intent(inout) :: a
       class(basenode_t), pointer :: m
 !
