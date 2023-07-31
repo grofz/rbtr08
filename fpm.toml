@@ -10,3 +10,5 @@ auto-tests = true
 auto-examples = true
 [install]
 library = false
+[fortran]
+implicit-external = true

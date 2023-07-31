@@ -733,8 +733,8 @@ print *, "insert_recurse: duplicit not ready yet"
 
 
 
-    function Successor(n)
-      class(basenode_t), pointer :: Successor
+    function Successor(n) result(S)
+      class(basenode_t), pointer :: S
       class(basenode_t), pointer, intent(in) :: n
 !
 ! Fails if called with null pointer. Returns a pointer to a successor node
@@ -747,7 +747,7 @@ print *, "insert_recurse: duplicit not ready yet"
       ! If node has a right subtree, the next element is the leftmost element
       ! in this right subtree.
       if (associated(n % right)) then
-        Successor => Leftmost(n % right)
+        S => Leftmost(n % right)
         return
       endif
 
@@ -757,10 +757,10 @@ print *, "insert_recurse: duplicit not ready yet"
 
       oldnode => n
       do
-        Successor => oldnode % Parentf()
+        S => oldnode % Parentf()
 
         ! no more parents, null pointer is returned
-        if (.not. associated(Successor)) exit
+        if (.not. associated(S)) exit
 
         ! parent of a left child is the next node and it is returned
         if (Is_left_child(oldnode)) exit
